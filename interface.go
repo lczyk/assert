@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/MarcinKonowalczyk/assert/compare"
+	"github.com/lczyk/assert/compare"
 )
 
 func That(t testing.TB, predicate bool, args ...any) {

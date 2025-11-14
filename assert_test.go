@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/MarcinKonowalczyk/assert"
+	"github.com/lczyk/assert"
 )
 
 // get the file and line number of the line above the call to this function

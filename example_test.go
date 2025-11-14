@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/MarcinKonowalczyk/assert"
+	"github.com/lczyk/assert"
 )
 
 func ExampleThat() {

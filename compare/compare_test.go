@@ -3,7 +3,7 @@ package compare_test
 import (
 	"testing"
 
-	"github.com/MarcinKonowalczyk/assert/compare"
+	"github.com/lczyk/assert/compare"
 )
 
 func TestCompareArraysUnordered(t *testing.T) {

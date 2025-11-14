@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/MarcinKonowalczyk/assert/compare"
+	"github.com/lczyk/assert/compare"
 )
 
 func getParentInfo(N int) (string, int) {
