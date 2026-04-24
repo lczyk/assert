@@ -17,14 +17,6 @@ func Equal[T comparable](t testing.TB, a T, b T) {
 	assert(t, nestedAssertParent, a == b, []any{"expected '%v' (%T) == '%v' (%T)", a, a, b, b})
 }
 
-// func AssertDeepEqual[T any](t testing.TB, a T, b T) {
-// 	t.Helper()
-// 	if !reflect.DeepEqual(a, b) {
-// 		file, line := getParentInfo(thisFunctionsParent)
-// 		t.Errorf("expected reflect.DeepEqual(%v, %v) in %s:%d", a, b, file, line)
-// 	}
-// }
-
 func NotEqual[T comparable](t testing.TB, a T, b T) {
 	t.Helper()
 	assert(t, nestedAssertParent, a != b, []any{"expected '%v' (%T) != '%v' (%T)", a, a, b, b})
@@ -49,22 +41,20 @@ func EqualCmp[T any](t testing.TB, a T, b T, comparator func(T, T) bool) {
 }
 
 // Compare two values of any type using a custom comparator function.
-// This is a more generic version of AssertEqualCmp, but it is less type-safe.
+// This is a more generic version of EqualCmp, but it is less type-safe.
 // The comparator function is responsible for type assertions.
 func EqualCmpAny(t testing.TB, a any, b any, comparator func(any, any) bool) {
 	t.Helper()
 	equal_cmp_any(t, nestedAssertParent, a, b, comparator)
 }
 
-// Utility functions for comparing arrays. Equivalent to AssertEqualWithComparator
-// where the comparator is CompareArrays.
+// Compare two arrays for element-wise equality.
 func EqualArrays[T comparable](t testing.TB, a []T, b []T) {
 	t.Helper()
 	equal_cmp(t, nestedAssertParent, a, b, compare.Arrays)
 }
 
-// Utility functions for comparing maps. Equivalent to AssertEqualWithComparator
-// where the comparator is CompareMaps.
+// Compare two maps for key/value equality.
 func EqualMaps[T comparable, V comparable](t testing.TB, a map[T]V, b map[T]V) {
 	t.Helper()
 	equal_cmp(t, nestedAssertParent, a, b, compare.Maps)

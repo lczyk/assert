@@ -22,7 +22,7 @@ becomes:
 func TestExample(t *testing.T) {
 	a := 1
 	b := 2
-	assert.That(t, a == b)
+	assert.That(t, a != b)
 }
 ```
 

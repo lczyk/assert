@@ -74,22 +74,3 @@ func ArraysUnordered[T comparable](a []T, b []T) bool {
 	}
 	return true
 }
-
-// func LineByLine(a string, b string) bool {
-// 	// Split both strings into lines
-// 	linesA := strings.Split(a, "\n")
-// 	linesB := strings.Split(b, "\n")
-
-// 	// Compare the number of lines
-// 	if len(linesA) != len(linesB) {
-// 		return false
-// 	}
-
-// 	// Compare each line
-// 	for i := range linesA {
-// 		if linesA[i] != linesB[i] {
-// 			return false
-// 		}
-// 	}
-// 	return true
-// }

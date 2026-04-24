@@ -148,6 +148,98 @@ func TestError(t *testing.T) {
 	})
 }
 
+func TestEqual(t *testing.T) {
+	t.Run("equal", func(t *testing.T) {
+		tt := &myT{}
+		assert.Equal(tt, 1, 1)
+		assert.That(t, !tt.Failed())
+	})
+	t.Run("not equal", func(t *testing.T) {
+		tt := &myT{}
+		assert.Equal(tt, 1, 2)
+		assert.That(t, tt.Failed())
+		assert.ContainsString(t, tt.message, "expected '1'")
+		assert.ContainsString(t, tt.message, "'2'")
+	})
+}
+
+func TestNotEqual(t *testing.T) {
+	t.Run("not equal", func(t *testing.T) {
+		tt := &myT{}
+		assert.NotEqual(tt, 1, 2)
+		assert.That(t, !tt.Failed())
+	})
+	t.Run("equal", func(t *testing.T) {
+		tt := &myT{}
+		assert.NotEqual(tt, 1, 1)
+		assert.That(t, tt.Failed())
+	})
+}
+
+func TestEqualArrays(t *testing.T) {
+	t.Run("equal", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualArrays(tt, []int{1, 2, 3}, []int{1, 2, 3})
+		assert.That(t, !tt.Failed())
+	})
+	t.Run("different order", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualArrays(tt, []int{1, 2, 3}, []int{3, 2, 1})
+		assert.That(t, tt.Failed())
+	})
+	t.Run("different length", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualArrays(tt, []int{1, 2, 3}, []int{1, 2})
+		assert.That(t, tt.Failed())
+	})
+}
+
+func TestEqualArraysUnordered(t *testing.T) {
+	t.Run("equal", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualArraysUnordered(tt, []int{1, 2, 3}, []int{3, 2, 1})
+		assert.That(t, !tt.Failed())
+	})
+	t.Run("different", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualArraysUnordered(tt, []int{1, 2, 3}, []int{1, 2, 4})
+		assert.That(t, tt.Failed())
+	})
+}
+
+func TestEqualMaps(t *testing.T) {
+	t.Run("equal", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualMaps(tt, map[string]int{"a": 1, "b": 2}, map[string]int{"b": 2, "a": 1})
+		assert.That(t, !tt.Failed())
+	})
+	t.Run("different value", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualMaps(tt, map[string]int{"a": 1}, map[string]int{"a": 2})
+		assert.That(t, tt.Failed())
+	})
+	t.Run("different key", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualMaps(tt, map[string]int{"a": 1}, map[string]int{"b": 1})
+		assert.That(t, tt.Failed())
+	})
+}
+
+func TestContainsString(t *testing.T) {
+	t.Run("contains", func(t *testing.T) {
+		tt := &myT{}
+		assert.ContainsString(tt, "hello world", "world")
+		assert.That(t, !tt.Failed())
+	})
+	t.Run("does not contain", func(t *testing.T) {
+		tt := &myT{}
+		assert.ContainsString(tt, "hello world", "lemons")
+		assert.That(t, tt.Failed())
+		assert.ContainsString(t, tt.message, "lemons")
+		assert.ContainsString(t, tt.message, "hello world")
+	})
+}
+
 func TestPanic(t *testing.T) {
 	t.Run("no panic", func(t *testing.T) {
 		tt := &myT{}

@@ -85,7 +85,6 @@ func assert_error(t testing.TB, N int, err error, expected any, args []any) {
 		}
 	case nil:
 		if err != nil {
-			// msg = fmt.Sprintf("expected no error, got '%v' (%T)", err, err)
 			msg_fun = func() string {
 				return fmt.Sprintf("expected no error, got '%v' (%T)", err, err)
 			}
