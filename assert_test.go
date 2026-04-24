@@ -266,11 +266,40 @@ func TestEqualLineByLine(t *testing.T) {
 		assert.ContainsString(t, tt.message, "expected '2' lines, got '3'")
 	})
 
-	t.Run("different line count trailing newline", func(t *testing.T) {
-		// "a\n" splits into ["a", ""], "a" into ["a"] — different line counts.
+	t.Run("trailing newline ignored on one side", func(t *testing.T) {
+		// A trailing newline should not cause a spurious failure.
 		tt := &myT{}
 		assert.EqualLineByLine(tt, "a\n", "a")
-		assert.That(t, tt.Failed(), "expected fail due to trailing newline")
+		assert.That(t, !tt.Failed(), "trailing newline should be ignored, got: %s", tt.message)
+	})
+
+	t.Run("trailing newline ignored multiline", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualLineByLine(tt, "a\nb\nc\n", "a\nb\nc")
+		assert.That(t, !tt.Failed(), "trailing newline should be ignored, got: %s", tt.message)
+	})
+
+	t.Run("trailing newlines on both sides", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualLineByLine(tt, "a\nb\n", "a\nb\n")
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+
+	t.Run("genuine extra line not masked by trailing newline rule", func(t *testing.T) {
+		// "a\nb\n" is equivalent to "a\nb" (2 lines). "a\nb\nc" is 3 lines.
+		// Trailing-newline normalization must NOT also swallow a real extra line.
+		tt := &myT{}
+		assert.EqualLineByLine(tt, "a\nb\n", "a\nb\nc")
+		assert.That(t, tt.Failed(), "expected fail — genuine line count mismatch")
+		assert.ContainsString(t, tt.message, "expected '2' lines, got '3'")
+	})
+
+	t.Run("empty vs single newline are equal", func(t *testing.T) {
+		// Under trailing-newline-ignored semantics, "\n" normalizes to "" —
+		// both are zero lines of content.
+		tt := &myT{}
+		assert.EqualLineByLine(tt, "", "\n")
+		assert.That(t, !tt.Failed(), "empty and '\\n' should be equal, got: %s", tt.message)
 	})
 
 	t.Run("differing middle line", func(t *testing.T) {

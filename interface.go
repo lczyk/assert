@@ -72,8 +72,10 @@ func Type[T any](t testing.TB, obj any, args ...any) T {
 
 func EqualLineByLine(t testing.TB, a string, b string) {
 	t.Helper()
-	// EqualCmp(t, a, b, compare.LineByLine)
-	// assert(t, nestedAssertParent, comparator(a, b), []any{"expected '%v' (%T) == '%v' (%T)", a, a, b, b})
+	// Ignore a single trailing newline on either side so comparing file-like
+	// content to a literal doesn't fail on an incidental EOF newline.
+	a = strings.TrimSuffix(a, "\n")
+	b = strings.TrimSuffix(b, "\n")
 	a_lines := strings.Split(a, "\n")
 	b_lines := strings.Split(b, "\n")
 	assert(t, nestedAssertParent, len(a_lines) == len(b_lines), []any{"expected '%d' lines, got '%d'", len(a_lines), len(b_lines)})
