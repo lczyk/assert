@@ -240,6 +240,61 @@ func TestContainsString(t *testing.T) {
 	})
 }
 
+func TestEqualLineByLine(t *testing.T) {
+	t.Run("equal single line", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualLineByLine(tt, "hello", "hello")
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+
+	t.Run("equal multiline", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualLineByLine(tt, "a\nb\nc", "a\nb\nc")
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+
+	t.Run("equal empty", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualLineByLine(tt, "", "")
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+
+	t.Run("different line count", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualLineByLine(tt, "a\nb", "a\nb\nc")
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "expected '2' lines, got '3'")
+	})
+
+	t.Run("different line count trailing newline", func(t *testing.T) {
+		// "a\n" splits into ["a", ""], "a" into ["a"] — different line counts.
+		tt := &myT{}
+		assert.EqualLineByLine(tt, "a\n", "a")
+		assert.That(t, tt.Failed(), "expected fail due to trailing newline")
+	})
+
+	t.Run("differing middle line", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualLineByLine(tt, "a\nb\nc", "a\nX\nc")
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "expected line 2 to be 'b', got 'X'")
+	})
+
+	t.Run("differing first line", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualLineByLine(tt, "x\ny", "a\ny")
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "expected line 1 to be 'x', got 'a'")
+	})
+
+	t.Run("differing last line", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualLineByLine(tt, "a\nb\nc", "a\nb\nZ")
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "expected line 3 to be 'c', got 'Z'")
+	})
+}
+
 func TestPanic(t *testing.T) {
 	t.Run("no panic", func(t *testing.T) {
 		tt := &myT{}
