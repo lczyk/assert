@@ -374,3 +374,127 @@ func TestPanic(t *testing.T) {
 		assert.That(t, !tt.Failed(), "Expected test to not fail, but it did")
 	})
 }
+
+func TestEqualCmp(t *testing.T) {
+	eqMod10 := func(a, b int) bool { return a%10 == b%10 }
+	t.Run("equal", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualCmp(tt, 12, 22, eqMod10)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("not equal", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualCmp(tt, 12, 23, eqMod10)
+		file, line := getAboveLineInfo(0)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "expected '12'")
+		assert.ContainsString(t, tt.message, "'23'")
+		assert.ContainsString(t, tt.message, "in "+file+":"+fmt.Sprint(line))
+	})
+}
+
+func TestEqualCmpAny(t *testing.T) {
+	strEq := func(a, b any) bool { return a.(string) == b.(string) }
+	t.Run("equal", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualCmpAny(tt, "x", "x", strEq)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("not equal", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualCmpAny(tt, "x", "y", strEq)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "expected 'x'")
+		assert.ContainsString(t, tt.message, "'y'")
+	})
+	t.Run("comparator panics", func(t *testing.T) {
+		tt := &myT{}
+		// Type-assert int to string - panics inside comparator.
+		assert.EqualCmpAny(tt, 1, "y", strEq)
+		assert.That(t, tt.Failed(), "expected fail from panic")
+		assert.ContainsString(t, tt.message, "Comparator panicked")
+	})
+}
+
+func TestErrorExpectedAsError(t *testing.T) {
+	t.Run("both nil", func(t *testing.T) {
+		tt := &myT{}
+		var expected error = nil
+		assert.Error(tt, nil, expected)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("nil expected, non-nil err", func(t *testing.T) {
+		tt := &myT{}
+		var expected error = nil
+		assert.Error(tt, fmt.Errorf("boom"), expected)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "expected no error")
+	})
+	t.Run("non-nil expected, nil err", func(t *testing.T) {
+		tt := &myT{}
+		expected := fmt.Errorf("boom")
+		assert.Error(tt, nil, expected)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "got no error")
+	})
+	t.Run("matching errors", func(t *testing.T) {
+		tt := &myT{}
+		a := fmt.Errorf("boom")
+		b := fmt.Errorf("boom")
+		assert.Error(tt, a, b)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("mismatched errors", func(t *testing.T) {
+		tt := &myT{}
+		assert.Error(tt, fmt.Errorf("a"), fmt.Errorf("b"))
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "expected error 'b'")
+		assert.ContainsString(t, tt.message, "got 'a'")
+	})
+}
+
+func TestErrorRegexpNilErr(t *testing.T) {
+	tt := &myT{}
+	assert.Error(tt, nil, regexp.MustCompile("boom"))
+	assert.That(t, tt.Failed(), "expected fail")
+	assert.ContainsString(t, tt.message, "got no error")
+}
+
+func TestErrorStringNilErrNonEmpty(t *testing.T) {
+	tt := &myT{}
+	assert.Error(tt, nil, "boom")
+	assert.That(t, tt.Failed(), "expected fail")
+	assert.ContainsString(t, tt.message, "expected no error, got 'boom'")
+}
+
+func TestErrorStringEmptyExpectedNilErr(t *testing.T) {
+	// Empty expected string + nil err is a no-op per assert_error.
+	tt := &myT{}
+	assert.Error(tt, nil, "")
+	assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+}
+
+func TestErrorInvalidExpectedTypePanics(t *testing.T) {
+	tt := &myT{}
+	assert.Panic(t, func() {
+		assert.Error(tt, fmt.Errorf("x"), 42)
+	}, func(t testing.TB, rec any) {
+		assert.Equal(t, rec, "expected type is not an error or string")
+	})
+}
+
+func TestThatNonStringFirstArg(t *testing.T) {
+	// First arg not a string: argsToMessage falls through to default %v path.
+	tt := &myT{}
+	assert.That(tt, false, 42)
+	assert.That(t, tt.Failed(), "expected fail")
+	assert.ContainsString(t, tt.message, "42")
+}
+
+func TestTypeCustomMessage(t *testing.T) {
+	tt := &myT{}
+	var x int = 1
+	_ = assert.Type[myThing](tt, x, "want myThing got %d", 1)
+	assert.That(t, tt.Failed(), "expected fail")
+	assert.ContainsString(t, tt.message, "want myThing got 1")
+}
