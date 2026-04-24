@@ -22,6 +22,33 @@ func ExampleThat() {
 	// true
 }
 
+func ExamplePanic() {
+
+	t := &testing.T{}
+
+	// Assert that f panics, and inspect the recovered value.
+	assert.Panic(t,
+		func() { panic("boom") },
+		func(t testing.TB, rec any) {
+			assert.Equal(t, rec, "boom")
+		},
+	)
+	fmt.Println(t.Failed())
+
+	// Pass nil as the recovery func if you only care that *something* panicked.
+	assert.Panic(t, func() { panic("ignored") }, nil)
+	fmt.Println(t.Failed())
+
+	// Fails when f does not panic.
+	assert.Panic(t, func() {}, nil)
+	fmt.Println(t.Failed())
+
+	// output:
+	// false
+	// false
+	// true
+}
+
 func TestExample(t *testing.T) {
 	a := 1
 	b := 2
