@@ -130,6 +130,60 @@ func TestCompareArraysUnordered_Duplicates(t *testing.T) {
 
 }
 
+func TestCompareArrays_Nil(t *testing.T) {
+	t.Run("nil vs nil", func(t *testing.T) {
+		if !compare.Arrays[int](nil, nil) {
+			t.Errorf("nil vs nil should be equal")
+		}
+	})
+	t.Run("nil vs empty", func(t *testing.T) {
+		if !compare.Arrays(nil, []int{}) {
+			t.Errorf("nil vs empty should be equal (len 0)")
+		}
+	})
+	t.Run("nil vs non-empty", func(t *testing.T) {
+		if compare.Arrays(nil, []int{1}) {
+			t.Errorf("nil vs non-empty should be unequal")
+		}
+	})
+}
+
+func TestCompareMaps_Nil(t *testing.T) {
+	t.Run("nil vs nil", func(t *testing.T) {
+		if !compare.Maps[string, int](nil, nil) {
+			t.Errorf("nil vs nil should be equal")
+		}
+	})
+	t.Run("nil vs empty", func(t *testing.T) {
+		if !compare.Maps(nil, map[string]int{}) {
+			t.Errorf("nil vs empty should be equal (len 0)")
+		}
+	})
+	t.Run("nil vs non-empty", func(t *testing.T) {
+		if compare.Maps(nil, map[string]int{"x": 1}) {
+			t.Errorf("nil vs non-empty should be unequal")
+		}
+	})
+}
+
+func TestCompareArraysUnordered_Nil(t *testing.T) {
+	t.Run("nil vs nil", func(t *testing.T) {
+		if !compare.ArraysUnordered[int](nil, nil) {
+			t.Errorf("nil vs nil should be equal")
+		}
+	})
+	t.Run("nil vs empty", func(t *testing.T) {
+		if !compare.ArraysUnordered(nil, []int{}) {
+			t.Errorf("nil vs empty should be equal (len 0)")
+		}
+	})
+	t.Run("nil vs non-empty", func(t *testing.T) {
+		if compare.ArraysUnordered(nil, []int{1}) {
+			t.Errorf("nil vs non-empty should be unequal")
+		}
+	})
+}
+
 func TestCompareArraysUnordered_DifferentLengths(t *testing.T) {
 	a := []int{1, 2, 3, 4, 5}
 	b := []int{5, 4, 3, 2}
