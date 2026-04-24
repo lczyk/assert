@@ -1,6 +1,8 @@
 package assert
 
 import (
+	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -63,6 +65,46 @@ func EqualMaps[T comparable, V comparable](t testing.TB, a map[T]V, b map[T]V) {
 func EqualArraysUnordered[T comparable](t testing.TB, a []T, b []T) {
 	t.Helper()
 	equal_cmp(t, nestedAssertParent, a, b, compare.ArraysUnordered)
+}
+
+// Assert that x is nil. Handles typed-nil-in-interface (e.g. (*T)(nil) inside any).
+func Nil(t testing.TB, x any, args ...any) {
+	t.Helper()
+	if isNil(x) {
+		return
+	}
+	file, line := getParentInfo(1)
+	msg := argsToMessage(func() string { return fmt.Sprintf("expected nil, got '%v' (%T)", x, x) }, args)
+	t.Errorf(msg+" in %s:%d", file, line)
+}
+
+// Assert that x is not nil. Handles typed-nil-in-interface.
+func NotNil(t testing.TB, x any, args ...any) {
+	t.Helper()
+	if !isNil(x) {
+		return
+	}
+	file, line := getParentInfo(1)
+	msg := argsToMessage(func() string { return fmt.Sprintf("expected non-nil, got nil (%T)", x) }, args)
+	t.Errorf(msg+" in %s:%d", file, line)
+}
+
+// Assert that len(x) == n. x must be array, chan, map, slice, or string.
+func Len(t testing.TB, x any, n int, args ...any) {
+	t.Helper()
+	v := reflect.ValueOf(x)
+	switch v.Kind() {
+	case reflect.Array, reflect.Chan, reflect.Map, reflect.Slice, reflect.String:
+	default:
+		panic(fmt.Sprintf("Len: unsupported kind %s", v.Kind()))
+	}
+	got := v.Len()
+	if got == n {
+		return
+	}
+	file, line := getParentInfo(1)
+	msg := argsToMessage(func() string { return fmt.Sprintf("expected len %d, got len %d: %v", n, got, x) }, args)
+	t.Errorf(msg+" in %s:%d", file, line)
 }
 
 func Type[T any](t testing.TB, obj any, args ...any) T {

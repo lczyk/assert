@@ -437,12 +437,24 @@ func TestErrorExpectedAsError(t *testing.T) {
 		assert.That(t, tt.Failed(), "expected fail")
 		assert.ContainsString(t, tt.message, "got no error")
 	})
-	t.Run("matching errors", func(t *testing.T) {
+	t.Run("same sentinel", func(t *testing.T) {
 		tt := &myT{}
-		a := fmt.Errorf("boom")
-		b := fmt.Errorf("boom")
-		assert.Error(tt, a, b)
+		sentinel := fmt.Errorf("boom")
+		assert.Error(tt, sentinel, sentinel)
 		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("wrapped sentinel matches via errors.Is", func(t *testing.T) {
+		tt := &myT{}
+		sentinel := fmt.Errorf("boom")
+		wrapped := fmt.Errorf("context: %w", sentinel)
+		assert.Error(tt, wrapped, sentinel)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("distinct errors with same message do not match", func(t *testing.T) {
+		// errors.Is semantics: identity/wrapping, not string equality.
+		tt := &myT{}
+		assert.Error(tt, fmt.Errorf("boom"), fmt.Errorf("boom"))
+		assert.That(t, tt.Failed(), "expected fail")
 	})
 	t.Run("mismatched errors", func(t *testing.T) {
 		tt := &myT{}
@@ -507,6 +519,168 @@ func TestErrorStringRegexMismatch(t *testing.T) {
 	assert.That(t, tt.Failed(), "expected fail")
 	assert.ContainsString(t, tt.message, "expected error to match 'lemons'")
 	assert.ContainsString(t, tt.message, "boom")
+}
+
+func TestNil(t *testing.T) {
+	t.Run("untyped nil", func(t *testing.T) {
+		tt := &myT{}
+		assert.Nil(tt, nil)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("nil pointer", func(t *testing.T) {
+		tt := &myT{}
+		var p *myThingImpl
+		assert.Nil(tt, p)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("typed-nil-in-interface", func(t *testing.T) {
+		// Classic trap: var p *T = nil; var i any = p; i != nil but underlying is nil.
+		tt := &myT{}
+		var p *myThingImpl
+		var i any = p
+		assert.That(t, i != nil, "precondition: typed-nil interface != nil")
+		assert.Nil(tt, i)
+		assert.That(t, !tt.Failed(), "Nil should see through typed-nil interface, got: %s", tt.message)
+	})
+	t.Run("nil slice", func(t *testing.T) {
+		tt := &myT{}
+		var s []int
+		assert.Nil(tt, s)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("nil map", func(t *testing.T) {
+		tt := &myT{}
+		var m map[string]int
+		assert.Nil(tt, m)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("nil chan", func(t *testing.T) {
+		tt := &myT{}
+		var c chan int
+		assert.Nil(tt, c)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("nil func", func(t *testing.T) {
+		tt := &myT{}
+		var f func()
+		assert.Nil(tt, f)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("non-nil pointer", func(t *testing.T) {
+		tt := &myT{}
+		x := &myThingImpl{}
+		assert.Nil(tt, x)
+		file, line := getAboveLineInfo(0)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "expected nil")
+		assert.ContainsString(t, tt.message, "*assert_test.myThingImpl")
+		assert.ContainsString(t, tt.message, "in "+file+":"+fmt.Sprint(line))
+	})
+	t.Run("non-nil int", func(t *testing.T) {
+		// Non-nilable kind: never nil.
+		tt := &myT{}
+		assert.Nil(tt, 42)
+		assert.That(t, tt.Failed(), "expected fail")
+	})
+	t.Run("custom message", func(t *testing.T) {
+		tt := &myT{}
+		assert.Nil(tt, 42, "want nil for %s", "thing")
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "want nil for thing")
+	})
+}
+
+func TestNotNil(t *testing.T) {
+	t.Run("non-nil pointer", func(t *testing.T) {
+		tt := &myT{}
+		x := &myThingImpl{}
+		assert.NotNil(tt, x)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("non-nil int", func(t *testing.T) {
+		tt := &myT{}
+		assert.NotNil(tt, 0)
+		assert.That(t, !tt.Failed(), "0 is not nil, got: %s", tt.message)
+	})
+	t.Run("untyped nil", func(t *testing.T) {
+		tt := &myT{}
+		assert.NotNil(tt, nil)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "expected non-nil")
+	})
+	t.Run("typed-nil-in-interface fails", func(t *testing.T) {
+		// Mirror of the Nil case — NotNil must also see through.
+		tt := &myT{}
+		var p *myThingImpl
+		var i any = p
+		assert.NotNil(tt, i)
+		assert.That(t, tt.Failed(), "NotNil should see through typed-nil interface")
+	})
+	t.Run("custom message", func(t *testing.T) {
+		tt := &myT{}
+		assert.NotNil(tt, nil, "want non-nil %d", 1)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "want non-nil 1")
+	})
+}
+
+func TestLen(t *testing.T) {
+	t.Run("slice match", func(t *testing.T) {
+		tt := &myT{}
+		assert.Len(tt, []int{1, 2, 3}, 3)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("slice mismatch shows contents", func(t *testing.T) {
+		tt := &myT{}
+		assert.Len(tt, []string{"a", "b"}, 3)
+		file, line := getAboveLineInfo(0)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "expected len 3, got len 2")
+		assert.ContainsString(t, tt.message, "[a b]")
+		assert.ContainsString(t, tt.message, "in "+file+":"+fmt.Sprint(line))
+	})
+	t.Run("map", func(t *testing.T) {
+		tt := &myT{}
+		assert.Len(tt, map[string]int{"a": 1, "b": 2}, 2)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("string", func(t *testing.T) {
+		tt := &myT{}
+		assert.Len(tt, "hello", 5)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("array", func(t *testing.T) {
+		tt := &myT{}
+		assert.Len(tt, [3]int{1, 2, 3}, 3)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("chan", func(t *testing.T) {
+		tt := &myT{}
+		c := make(chan int, 4)
+		c <- 1
+		c <- 2
+		assert.Len(tt, c, 2)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("nil slice has len 0", func(t *testing.T) {
+		tt := &myT{}
+		var s []int
+		assert.Len(tt, s, 0)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("unsupported kind panics", func(t *testing.T) {
+		assert.Panic(t, func() { assert.Len(&myT{}, 42, 1) }, func(t testing.TB, rec any) {
+			s, ok := rec.(string)
+			assert.That(t, ok, "expected string panic, got %T", rec)
+			assert.ContainsString(t, s, "Len: unsupported kind")
+		})
+	})
+	t.Run("custom message", func(t *testing.T) {
+		tt := &myT{}
+		assert.Len(tt, []int{1}, 2, "want %d items", 2)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "want 2 items")
+	})
 }
 
 func TestTypeCustomMessage(t *testing.T) {

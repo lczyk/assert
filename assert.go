@@ -2,6 +2,7 @@ package assert
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"runtime"
 	"testing"
@@ -129,6 +130,20 @@ func equal_cmp_any(t testing.TB, N int, a any, b any, comparator func(any, any) 
 	}()
 	t.Helper()
 	assert(t, N+1, comparator(a, b), []any{"expected '%v' (%T) == '%v' (%T)", a, a, b, b})
+}
+
+// isNil handles the typed-nil-in-interface case: var p *T = nil; var i any = p
+// — `i != nil` is true but the underlying value is nil.
+func isNil(x any) bool {
+	if x == nil {
+		return true
+	}
+	v := reflect.ValueOf(x)
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice, reflect.UnsafePointer:
+		return v.IsNil()
+	}
+	return false
 }
 
 // Check that the type of obj is T.
