@@ -12,6 +12,12 @@ test:  ## Run the test suite
 		go test ./...; \
 	fi
 
+.PHONY: cover
+cover:  ## Coverage profile + HTML report
+	go test -coverpkg=./... -coverprofile=cover.out ./...
+	go tool cover -func=cover.out
+	go tool cover -html=cover.out
+
 .PHONY: lint
 lint:  ## go vet + gofmt check (no writes)
 	go vet ./...
