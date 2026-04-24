@@ -30,6 +30,9 @@ func NoError(t testing.TB, err error, args ...any) {
 	assert_error(t, nestedAssertParent, err, nil, args)
 }
 
+// AnyError matches any non-nil error when passed as the expected arg to Error.
+const AnyError = ""
+
 // Assert that an error is not nil.
 func Error(t testing.TB, err error, expected any, args ...any) {
 	t.Helper()

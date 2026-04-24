@@ -50,12 +50,15 @@ func assert_error(t testing.TB, N int, err error, expected any, args []any) {
 	switch expected := expected.(type) {
 	case string:
 		if err == nil {
-			if expected != "" {
-				msg_fun = func() string {
-					return fmt.Sprintf("expected no error, got '%s'", expected)
+			msg_fun = func() string {
+				if expected == "" {
+					return "expected an error, got nil"
 				}
+				return fmt.Sprintf("expected error to match '%s', got no error (nil)", expected)
 			}
 		} else {
+			// Empty pattern compiles to a regex that matches anything, i.e.
+			// `Error(t, err, AnyError)` accepts any non-nil error.
 			re := regexp.MustCompile(expected)
 			if !re.MatchString(err.Error()) {
 				msg_fun = func() string {

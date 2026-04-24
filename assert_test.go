@@ -476,14 +476,27 @@ func TestErrorStringNilErrNonEmpty(t *testing.T) {
 	tt := &myT{}
 	assert.Error(tt, nil, "boom")
 	assert.That(t, tt.Failed(), "expected fail")
-	assert.ContainsString(t, tt.message, "expected no error, got 'boom'")
+	assert.ContainsString(t, tt.message, "expected error to match 'boom'")
+	assert.ContainsString(t, tt.message, "got no error (nil)")
 }
 
-func TestErrorStringEmptyExpectedNilErr(t *testing.T) {
-	// Empty expected string + nil err is a no-op per assert_error.
-	tt := &myT{}
-	assert.Error(tt, nil, "")
-	assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+func TestErrorAnyError(t *testing.T) {
+	t.Run("non-nil err passes", func(t *testing.T) {
+		tt := &myT{}
+		assert.Error(tt, fmt.Errorf("anything"), assert.AnyError)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("empty string is equivalent to AnyError", func(t *testing.T) {
+		tt := &myT{}
+		assert.Error(tt, fmt.Errorf("anything"), "")
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("nil err fails", func(t *testing.T) {
+		tt := &myT{}
+		assert.Error(tt, nil, assert.AnyError)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "expected an error, got nil")
+	})
 }
 
 func TestErrorInvalidExpectedTypePanics(t *testing.T) {
