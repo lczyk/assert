@@ -1,6 +1,6 @@
 # assert
 
-[![test](https://github.com/lczyk/assert/actions/workflows/test.yml/badge.svg)](https://github.com/lczyk/assert/actions/workflows/test.yml)
+[![lint_and_test](https://github.com/lczyk/assert/actions/workflows/lint_and_test.yml/badge.svg)](https://github.com/lczyk/assert/actions/workflows/lint_and_test.yml)
 
 Mini package to make writing tests in golang a bit neater -- a little bit more like `pytest`.
 
