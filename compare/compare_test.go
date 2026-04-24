@@ -25,11 +25,23 @@ func TestCompareErrors(t *testing.T) {
 			t.Errorf("expected non-nil vs nil to be unequal")
 		}
 	})
-	t.Run("same message same type", func(t *testing.T) {
-		a := fmt.Errorf("boom")
-		b := fmt.Errorf("boom")
-		if !compare.Errors(a, b) {
-			t.Errorf("expected equal errors to compare equal")
+	t.Run("same instance", func(t *testing.T) {
+		sentinel := fmt.Errorf("boom")
+		if !compare.Errors(sentinel, sentinel) {
+			t.Errorf("expected same instance to match")
+		}
+	})
+	t.Run("wrapped sentinel", func(t *testing.T) {
+		sentinel := fmt.Errorf("boom")
+		wrapped := fmt.Errorf("ctx: %w", sentinel)
+		if !compare.Errors(wrapped, sentinel) {
+			t.Errorf("expected wrapped sentinel to match target via errors.Is")
+		}
+	})
+	t.Run("distinct errors with same message do not match", func(t *testing.T) {
+		// errors.Is semantics — identity/wrap, not string equality.
+		if compare.Errors(fmt.Errorf("boom"), fmt.Errorf("boom")) {
+			t.Errorf("expected distinct fmt.Errorf instances to be unequal under errors.Is")
 		}
 	})
 	t.Run("different message", func(t *testing.T) {

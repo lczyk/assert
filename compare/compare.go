@@ -1,23 +1,16 @@
 package compare
 
 import (
-	"reflect"
+	"errors"
 )
 
-func Errors(a error, b error) bool {
-	if a == nil && b == nil {
+// Errors reports whether err matches target via errors.Is semantics
+// (identity or wrapped). Both nil counts as match.
+func Errors(err error, target error) bool {
+	if err == nil && target == nil {
 		return true
 	}
-	if a == nil || b == nil {
-		return false
-	}
-	if a.Error() != b.Error() {
-		return false
-	}
-	if reflect.TypeOf(a) != reflect.TypeOf(b) {
-		return false
-	}
-	return true
+	return errors.Is(err, target)
 }
 
 func Arrays[T comparable](a []T, b []T) bool {
