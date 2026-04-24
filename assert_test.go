@@ -491,6 +491,24 @@ func TestThatNonStringFirstArg(t *testing.T) {
 	assert.ContainsString(t, tt.message, "42")
 }
 
+func TestThatFailNoArgs(t *testing.T) {
+	// Covers the "assertion failed" default-message lambda in assert().
+	tt := &myT{}
+	assert.That(tt, false)
+	assert.That(t, tt.Failed(), "expected fail")
+	assert.ContainsString(t, tt.message, "assertion failed")
+}
+
+func TestErrorStringRegexMismatch(t *testing.T) {
+	// Covers the "expected error to match" path when expected is a string
+	// (compiled as regex) and err's message doesn't match.
+	tt := &myT{}
+	assert.Error(tt, fmt.Errorf("boom"), "lemons")
+	assert.That(t, tt.Failed(), "expected fail")
+	assert.ContainsString(t, tt.message, "expected error to match 'lemons'")
+	assert.ContainsString(t, tt.message, "boom")
+}
+
 func TestTypeCustomMessage(t *testing.T) {
 	tt := &myT{}
 	var x int = 1

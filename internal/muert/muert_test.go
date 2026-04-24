@@ -64,6 +64,17 @@ func TestThat(t *testing.T) {
 			t.Errorf("expected message to contain %q, got %q", want, tt.message)
 		}
 	})
+	t.Run("false with non-string first arg", func(t *testing.T) {
+		// Covers the default %v branch of argsToMessage.
+		tt := &myT{}
+		assert.That(tt, false, 42)
+		if !tt.Failed() {
+			t.Errorf("expected fail")
+		}
+		if want := "42"; !contains(tt.message, want) {
+			t.Errorf("expected message to contain %q, got %q", want, tt.message)
+		}
+	})
 }
 
 func TestEqual(t *testing.T) {
