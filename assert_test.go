@@ -558,7 +558,7 @@ func TestErrorInvalidExpectedTypePanics(t *testing.T) {
 }
 
 func TestThatNonStringFirstArg(t *testing.T) {
-	// First arg not a string: argsToMessage falls through to default %v path.
+	// First arg not a string: args_to_message falls through to default %v path.
 	tt := &myT{}
 	assert.That(tt, false, 42)
 	assert.That(t, tt.Failed(), "expected fail")

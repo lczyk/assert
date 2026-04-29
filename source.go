@@ -86,10 +86,10 @@ func getSourceSnippet(file string, line int) (string, error) {
 	return strings.Join(out, "\n"), nil
 }
 
-// locStr formats "file:line" with the source snippet on following
+// loc_str formats "file:line" with the source snippet on following
 // indented lines. Returns an error if the source could not be read;
 // callers should fall back to a plain "file:line" format.
-func locStr(file string, line int) (string, error) {
+func loc_str(file string, line int) (string, error) {
 	src, err := getSourceSnippet(file, line)
 	if err != nil {
 		return "", err

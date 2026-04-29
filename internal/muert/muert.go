@@ -72,14 +72,14 @@ func Error(t testing.TB, err error, expected string, args ...any) {
 	})
 }
 
-func getParentInfo(N int) (string, int) {
+func get_parent_info(N int) (string, int) {
 	parent, _, _, _ := runtime.Caller(1 + N)
 	return runtime.FuncForPC(parent).FileLine(parent)
 }
 
 // convert 'args ...any' to the assertion message
 // internal utility so we don't use variadics to make the calls a bit more consistent
-func argsToMessage(args []any) string {
+func args_to_message(args []any) string {
 	var msg string = "assertion failed"
 	if len(args) > 0 {
 		switch a := args[0].(type) {
@@ -95,7 +95,7 @@ func argsToMessage(args []any) string {
 func assert(t testing.TB, N int, predicate bool, args []any) {
 	t.Helper()
 	if !predicate {
-		file, line := getParentInfo(N)
-		t.Errorf(argsToMessage(args)+" in %s:%d", file, line)
+		file, line := get_parent_info(N)
+		t.Errorf(args_to_message(args)+" in %s:%d", file, line)
 	}
 }

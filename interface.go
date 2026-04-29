@@ -11,23 +11,29 @@ import (
 
 func That(t testing.TB, predicate bool, args ...any) {
 	t.Helper()
-	assert(t, nestedAssertParent, predicate, args)
+	assert(t, nested_assert_parent, predicate, args)
 }
 
 func Equal[T comparable](t testing.TB, a T, b T) {
 	t.Helper()
-	assert(t, nestedAssertParent, a == b, []any{"expected '%v' (%T) == '%v' (%T)", a, a, b, b})
+	if a == b {
+		return
+	}
+	fail_here(t, 1, fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b))
 }
 
 func NotEqual[T comparable](t testing.TB, a T, b T) {
 	t.Helper()
-	assert(t, nestedAssertParent, a != b, []any{"expected '%v' (%T) != '%v' (%T)", a, a, b, b})
+	if a != b {
+		return
+	}
+	fail_here(t, 1, fmt.Sprintf("expected '%v' (%T) != '%v' (%T)", a, a, b, b))
 }
 
 // Assert that error is nil.
 func NoError(t testing.TB, err error, args ...any) {
 	t.Helper()
-	assert_error(t, nestedAssertParent, err, nil, args)
+	assert_error(t, nested_assert_parent, err, nil, args)
 }
 
 // AnyError matches any non-nil error when passed as the expected arg to Error.
@@ -48,7 +54,7 @@ var AnyError error = anyErr{}
 //   - *regexp.Regexp: regex pattern, matched as a substring against err.Error()
 func Error(t testing.TB, err error, expected any, args ...any) {
 	t.Helper()
-	assert_error(t, nestedAssertParent, err, expected, args)
+	assert_error(t, nested_assert_parent, err, expected, args)
 }
 
 // ErrorIs asserts that err matches expected via errors.Is semantics
@@ -58,17 +64,17 @@ func ErrorIs(t testing.TB, err error, expected error, args ...any) {
 	if compare.ErrorsIs(err, expected) {
 		return
 	}
-	file, line := getParentInfo(1)
-	msg := argsToMessage(func() string {
+	file, line := get_parent_info(1)
+	msg := args_to_message(func() string {
 		if err == nil {
-			return fmt.Sprintf("expected error %s, got no error (nil)", describeErr(expected))
+			return fmt.Sprintf("expected error %s, got no error (nil)", describe_err(expected))
 		}
 		if expected == nil {
-			return fmt.Sprintf("expected no error, got %s", describeErr(err))
+			return fmt.Sprintf("expected no error, got %s", describe_err(err))
 		}
-		return fmt.Sprintf("expected errors.Is('%v', '%v') to be true, got %s", err, expected, describeErr(err))
+		return fmt.Sprintf("expected errors.Is('%v', '%v') to be true, got %s", err, expected, describe_err(err))
 	}, args)
-	if loc, err := locStr(file, line); err != nil {
+	if loc, err := loc_str(file, line); err != nil {
 		t.Errorf(msg+" in %s:%d", file, line)
 	} else {
 		t.Errorf("%s in %s", msg, loc)
@@ -78,7 +84,7 @@ func ErrorIs(t testing.TB, err error, expected error, args ...any) {
 // Compare two values using a custom comparator function.
 func EqualCmp[T any](t testing.TB, a T, b T, comparator func(T, T) bool, args ...any) {
 	t.Helper()
-	equal_cmp(t, nestedAssertParent, a, b, comparator, args)
+	equal_cmp(t, nested_assert_parent, a, b, comparator, args)
 }
 
 // Compare two values of any type using a custom comparator function.
@@ -86,35 +92,35 @@ func EqualCmp[T any](t testing.TB, a T, b T, comparator func(T, T) bool, args ..
 // The comparator function is responsible for type assertions.
 func EqualCmpAny(t testing.TB, a any, b any, comparator func(any, any) bool, args ...any) {
 	t.Helper()
-	equal_cmp_any(t, nestedAssertParent, a, b, comparator, args)
+	equal_cmp_any(t, nested_assert_parent, a, b, comparator, args)
 }
 
 // Compare two arrays for element-wise equality.
 func EqualArrays[T comparable](t testing.TB, a []T, b []T, args ...any) {
 	t.Helper()
-	equal_cmp(t, nestedAssertParent, a, b, compare.Arrays, args)
+	equal_cmp(t, nested_assert_parent, a, b, compare.Arrays, args)
 }
 
 // Compare two maps for key/value equality.
 func EqualMaps[T comparable, V comparable](t testing.TB, a map[T]V, b map[T]V, args ...any) {
 	t.Helper()
-	equal_cmp(t, nestedAssertParent, a, b, compare.Maps, args)
+	equal_cmp(t, nested_assert_parent, a, b, compare.Maps, args)
 }
 
 func EqualArraysUnordered[T comparable](t testing.TB, a []T, b []T, args ...any) {
 	t.Helper()
-	equal_cmp(t, nestedAssertParent, a, b, compare.ArraysUnordered, args)
+	equal_cmp(t, nested_assert_parent, a, b, compare.ArraysUnordered, args)
 }
 
 // Assert that x is nil. Handles typed-nil-in-interface (e.g. (*T)(nil) inside any).
 func Nil(t testing.TB, x any, args ...any) {
 	t.Helper()
-	if isNil(x) {
+	if is_nil(x) {
 		return
 	}
-	file, line := getParentInfo(1)
-	msg := argsToMessage(func() string { return fmt.Sprintf("expected nil, got %s", describeNonNil(x)) }, args)
-	if loc, err := locStr(file, line); err != nil {
+	file, line := get_parent_info(1)
+	msg := args_to_message(func() string { return fmt.Sprintf("expected nil, got %s", describe_non_nil(x)) }, args)
+	if loc, err := loc_str(file, line); err != nil {
 		t.Errorf(msg+" in %s:%d", file, line)
 	} else {
 		t.Errorf("%s in %s", msg, loc)
@@ -124,12 +130,12 @@ func Nil(t testing.TB, x any, args ...any) {
 // Assert that x is not nil. Handles typed-nil-in-interface.
 func NotNil(t testing.TB, x any, args ...any) {
 	t.Helper()
-	if !isNil(x) {
+	if !is_nil(x) {
 		return
 	}
-	file, line := getParentInfo(1)
-	msg := argsToMessage(func() string { return fmt.Sprintf("expected non-nil, got nil (%T)", x) }, args)
-	if loc, err := locStr(file, line); err != nil {
+	file, line := get_parent_info(1)
+	msg := args_to_message(func() string { return fmt.Sprintf("expected non-nil, got nil (%T)", x) }, args)
+	if loc, err := loc_str(file, line); err != nil {
 		t.Errorf(msg+" in %s:%d", file, line)
 	} else {
 		t.Errorf("%s in %s", msg, loc)
@@ -149,9 +155,9 @@ func Len(t testing.TB, x any, n int, args ...any) {
 	if got == n {
 		return
 	}
-	file, line := getParentInfo(1)
-	msg := argsToMessage(func() string { return fmt.Sprintf("expected len %d, got len %d: %v", n, got, x) }, args)
-	if loc, err := locStr(file, line); err != nil {
+	file, line := get_parent_info(1)
+	msg := args_to_message(func() string { return fmt.Sprintf("expected len %d, got len %d: %v", n, got, x) }, args)
+	if loc, err := loc_str(file, line); err != nil {
 		t.Errorf(msg+" in %s:%d", file, line)
 	} else {
 		t.Errorf("%s in %s", msg, loc)
@@ -160,7 +166,7 @@ func Len(t testing.TB, x any, n int, args ...any) {
 
 func Type[T any](t testing.TB, obj any, args ...any) T {
 	t.Helper()
-	return assert_type[T](t, nestedAssertParent, obj, args...)
+	return assert_type[T](t, nested_assert_parent, obj, args...)
 }
 
 func EqualLineByLine(t testing.TB, a string, b string) {
@@ -171,18 +177,23 @@ func EqualLineByLine(t testing.TB, a string, b string) {
 	b = strings.TrimSuffix(b, "\n")
 	a_lines := strings.Split(a, "\n")
 	b_lines := strings.Split(b, "\n")
-	assert(t, nestedAssertParent, len(a_lines) == len(b_lines), []any{"expected '%d' lines, got '%d'", len(a_lines), len(b_lines)})
 	if len(a_lines) != len(b_lines) {
+		fail_here(t, 1, fmt.Sprintf("expected '%d' lines, got '%d'", len(a_lines), len(b_lines)))
 		return // no point in checking the lines if the number of lines is different
 	}
 	for i := range a_lines {
-		assert(t, nestedAssertParent, a_lines[i] == b_lines[i], []any{"expected line %d to be '%s', got '%s'", i + 1, a_lines[i], b_lines[i]})
+		if a_lines[i] != b_lines[i] {
+			fail_here(t, 1, fmt.Sprintf("expected line %d to be '%s', got '%s'", i+1, a_lines[i], b_lines[i]))
+		}
 	}
 }
 
 func ContainsString(t testing.TB, haystack string, needle string) {
 	t.Helper()
-	assert(t, nestedAssertParent, strings.Contains(haystack, needle), []any{"expected needle string '%s' to be in a haystack string '%s'", needle, haystack})
+	if strings.Contains(haystack, needle) {
+		return
+	}
+	fail_here(t, 1, fmt.Sprintf("expected needle string '%s' to be in a haystack string '%s'", needle, haystack))
 }
 
 func Panic(t testing.TB, f func(), f_recover func(t testing.TB, rec any), args ...any) {
@@ -194,7 +205,7 @@ func Panic(t testing.TB, f func(), f_recover func(t testing.TB, rec any), args .
 			}
 			return
 		}
-		assert(t, nestedAssertParent+1, false, []any{"expected panic, but no panic occurred"})
+		assert(t, nested_assert_parent+1, false, []any{"expected panic, but no panic occurred"})
 	}()
 	f()
 }
