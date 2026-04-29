@@ -209,7 +209,7 @@ func assert_type[T any](t testing.TB, N int, obj any, args ...any) T {
 	} else {
 		file, line := getParentInfo(N)
 		msg := argsToMessage(func() string {
-			return fmt.Sprintf("expected type %T, got %T", (*T)(nil), obj)
+			return fmt.Sprintf("expected type %s, got %T", reflect.TypeOf((*T)(nil)).Elem(), obj)
 		}, args)
 		if loc, err := locStr(file, line); err != nil {
 			t.Errorf(msg+" in %s:%d", file, line)
