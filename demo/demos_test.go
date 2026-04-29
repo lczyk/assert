@@ -56,6 +56,12 @@ func TestDemoNil(t *testing.T) {
 	assert.Nil(t, &x)
 }
 
+func TestDemoNilTypedNil(t *testing.T) {
+	var p *int
+	var i any = p
+	assert.Nil(t, i)
+}
+
 func TestDemoNotNil(t *testing.T) {
 	var p *int
 	assert.NotNil(t, p)
@@ -80,6 +86,17 @@ func TestDemoContainsString(t *testing.T) {
 
 func TestDemoPanic(t *testing.T) {
 	assert.Panic(t, func() { /* no panic */ }, nil)
+}
+
+// f panics with "boom"; recover func asserts it was "kapow" — fails
+// inside the recover callback, so failure points at the inner assertion.
+func TestDemoPanicRecover(t *testing.T) {
+	assert.Panic(t,
+		func() { panic("boom") },
+		func(t testing.TB, rec any) {
+			assert.Equal(t, rec, any("kapow"))
+		},
+	)
 }
 
 // And one passing case, as a cherry on top
