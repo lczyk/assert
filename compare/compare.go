@@ -2,11 +2,23 @@ package compare
 
 import (
 	"errors"
+	"reflect"
 )
 
-// Errors reports whether err matches target via errors.Is semantics
-// (identity or wrapped). Both nil counts as match.
+// Errors reports whether err and target are structurally equivalent: both nil,
+// or same dynamic type and equal Error() string.
+//
+// This does NOT walk the errors.Is wrap chain. Use ErrorsIs for that.
 func Errors(err error, target error) bool {
+	if err == nil || target == nil {
+		return err == nil && target == nil
+	}
+	return reflect.TypeOf(err) == reflect.TypeOf(target) && err.Error() == target.Error()
+}
+
+// ErrorsIs reports whether err matches target under errors.Is semantics
+// (identity or wrap chain). Both nil counts as match.
+func ErrorsIs(err error, target error) bool {
 	if err == nil && target == nil {
 		return true
 	}

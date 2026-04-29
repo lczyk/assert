@@ -31,17 +31,18 @@ func TestCompareErrors(t *testing.T) {
 			t.Errorf("expected same instance to match")
 		}
 	})
-	t.Run("wrapped sentinel", func(t *testing.T) {
+	t.Run("wrapped sentinel does not match (use ErrorsIs)", func(t *testing.T) {
+		// Errors is structural: wrapped error has different dynamic type.
 		sentinel := fmt.Errorf("boom")
 		wrapped := fmt.Errorf("ctx: %w", sentinel)
-		if !compare.Errors(wrapped, sentinel) {
-			t.Errorf("expected wrapped sentinel to match target via errors.Is")
+		if compare.Errors(wrapped, sentinel) {
+			t.Errorf("expected wrapped sentinel NOT to match under structural Errors")
 		}
 	})
-	t.Run("distinct errors with same message do not match", func(t *testing.T) {
-		// errors.Is semantics — identity/wrap, not string equality.
-		if compare.Errors(fmt.Errorf("boom"), fmt.Errorf("boom")) {
-			t.Errorf("expected distinct fmt.Errorf instances to be unequal under errors.Is")
+	t.Run("distinct errors with same message and type match", func(t *testing.T) {
+		// Structural semantics: same dynamic type + same Error() string.
+		if !compare.Errors(fmt.Errorf("boom"), fmt.Errorf("boom")) {
+			t.Errorf("expected distinct fmt.Errorf instances with same msg to match")
 		}
 	})
 	t.Run("different message", func(t *testing.T) {
@@ -54,6 +55,32 @@ func TestCompareErrors(t *testing.T) {
 		b := customErr{msg: "boom"}
 		if compare.Errors(a, b) {
 			t.Errorf("expected same message but different types to be unequal")
+		}
+	})
+}
+
+func TestCompareErrorsIs(t *testing.T) {
+	t.Run("both nil", func(t *testing.T) {
+		if !compare.ErrorsIs(nil, nil) {
+			t.Errorf("expected both-nil to match")
+		}
+	})
+	t.Run("same instance", func(t *testing.T) {
+		sentinel := fmt.Errorf("boom")
+		if !compare.ErrorsIs(sentinel, sentinel) {
+			t.Errorf("expected same instance to match")
+		}
+	})
+	t.Run("wrapped sentinel matches via errors.Is", func(t *testing.T) {
+		sentinel := fmt.Errorf("boom")
+		wrapped := fmt.Errorf("ctx: %w", sentinel)
+		if !compare.ErrorsIs(wrapped, sentinel) {
+			t.Errorf("expected wrapped sentinel to match under errors.Is")
+		}
+	})
+	t.Run("distinct errors with same message do not match", func(t *testing.T) {
+		if compare.ErrorsIs(fmt.Errorf("boom"), fmt.Errorf("boom")) {
+			t.Errorf("expected distinct instances to be unequal under errors.Is")
 		}
 	})
 }

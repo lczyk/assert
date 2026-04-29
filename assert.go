@@ -33,6 +33,10 @@ func argsToMessage(default_func func() string, args []any) string {
 	return msg
 }
 
+type anyErr struct{}
+
+func (anyErr) Error() string { return "<any error>" }
+
 const nestedAssertParent = 2
 
 func assert(t testing.TB, N int, predicate bool, args []any) {
@@ -47,18 +51,28 @@ func assert(t testing.TB, N int, predicate bool, args []any) {
 func assert_error(t testing.TB, N int, err error, expected any, args []any) {
 	t.Helper()
 	var msg_fun func() string
+
+	// AnyError sentinel: any non-nil err passes; nil err fails.
+	if e, ok := expected.(error); ok && e == AnyError {
+		if err == nil {
+			msg_fun = func() string { return "expected an error, got nil" }
+		}
+		if msg_fun != nil {
+			msg := argsToMessage(msg_fun, args)
+			file, line := getParentInfo(N)
+			t.Errorf(msg+" in %s:%d", file, line)
+		}
+		return
+	}
+
 	switch expected := expected.(type) {
 	case string:
 		if err == nil {
 			msg_fun = func() string {
-				if expected == "" {
-					return "expected an error, got nil"
-				}
 				return fmt.Sprintf("expected error to match '%s', got no error (nil)", expected)
 			}
 		} else {
-			// Empty pattern compiles to a regex that matches anything, i.e.
-			// `Error(t, err, AnyError)` accepts any non-nil error.
+			// Regex pattern matched as substring against err.Error().
 			re := regexp.MustCompile(expected)
 			if !re.MatchString(err.Error()) {
 				msg_fun = func() string {
@@ -80,7 +94,7 @@ func assert_error(t testing.TB, N int, err error, expected any, args []any) {
 					return fmt.Sprintf("expected error '%v' (%T), got no error (nil)", expected, expected)
 				}
 			} else {
-				if !compare.Errors(err, expected) {
+				if !compare.Errors(err, expected) && !compare.ErrorsIs(err, expected) {
 					msg_fun = func() string {
 						return fmt.Sprintf("expected error '%v' (%T), got '%v' (%T)", expected, expected, err, err)
 					}
@@ -118,12 +132,19 @@ func assert_error(t testing.TB, N int, err error, expected any, args []any) {
 	}
 }
 
-func equal_cmp[T any](t testing.TB, N int, a T, b T, comparator func(T, T) bool) {
+func equal_cmp[T any](t testing.TB, N int, a T, b T, comparator func(T, T) bool, args []any) {
 	t.Helper()
-	assert(t, N+1, comparator(a, b), []any{"expected '%v' (%T) == '%v' (%T)", a, a, b, b})
+	if comparator(a, b) {
+		return
+	}
+	file, line := getParentInfo(N)
+	msg := argsToMessage(func() string {
+		return fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b)
+	}, args)
+	t.Errorf(msg+" in %s:%d", file, line)
 }
 
-func equal_cmp_any(t testing.TB, N int, a any, b any, comparator func(any, any) bool) {
+func equal_cmp_any(t testing.TB, N int, a any, b any, comparator func(any, any) bool, args []any) {
 	defer func() {
 		if r := recover(); r != nil {
 			// If the comparator panics, we want to catch it and report it as a test failure.
@@ -132,7 +153,14 @@ func equal_cmp_any(t testing.TB, N int, a any, b any, comparator func(any, any) 
 		}
 	}()
 	t.Helper()
-	assert(t, N+1, comparator(a, b), []any{"expected '%v' (%T) == '%v' (%T)", a, a, b, b})
+	if comparator(a, b) {
+		return
+	}
+	file, line := getParentInfo(N)
+	msg := argsToMessage(func() string {
+		return fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b)
+	}, args)
+	t.Errorf(msg+" in %s:%d", file, line)
 }
 
 // isNil handles the typed-nil-in-interface case: var p *T = nil; var i any = p

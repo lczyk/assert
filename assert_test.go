@@ -391,6 +391,12 @@ func TestEqualCmp(t *testing.T) {
 		assert.ContainsString(t, tt.message, "'23'")
 		assert.ContainsString(t, tt.message, "in "+file+":"+fmt.Sprint(line))
 	})
+	t.Run("custom message via args", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualCmp(tt, 12, 23, eqMod10, "domain mismatch: %d vs %d", 12, 23)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "domain mismatch: 12 vs 23")
+	})
 }
 
 func TestEqualCmpAny(t *testing.T) {
@@ -443,18 +449,17 @@ func TestErrorExpectedAsError(t *testing.T) {
 		assert.Error(tt, sentinel, sentinel)
 		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
 	})
-	t.Run("wrapped sentinel matches via errors.Is", func(t *testing.T) {
+	t.Run("wrapped sentinel matches via errors.Is fallback", func(t *testing.T) {
 		tt := &myT{}
 		sentinel := fmt.Errorf("boom")
 		wrapped := fmt.Errorf("context: %w", sentinel)
 		assert.Error(tt, wrapped, sentinel)
-		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+		assert.That(t, !tt.Failed(), "expected pass via wrap-chain, got: %s", tt.message)
 	})
-	t.Run("distinct errors with same message do not match", func(t *testing.T) {
-		// errors.Is semantics: identity/wrapping, not string equality.
+	t.Run("distinct errors with same type and message match structurally", func(t *testing.T) {
 		tt := &myT{}
 		assert.Error(tt, fmt.Errorf("boom"), fmt.Errorf("boom"))
-		assert.That(t, tt.Failed(), "expected fail")
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
 	})
 	t.Run("mismatched errors", func(t *testing.T) {
 		tt := &myT{}
@@ -496,6 +501,50 @@ func TestErrorAnyError(t *testing.T) {
 		assert.Error(tt, nil, assert.AnyError)
 		assert.That(t, tt.Failed(), "expected fail")
 		assert.ContainsString(t, tt.message, "expected an error, got nil")
+	})
+	t.Run("AnyError is a distinct error sentinel", func(t *testing.T) {
+		// Sanity: AnyError satisfies the error interface but is not equal to
+		// arbitrary errors with the same message.
+		assert.That(t, assert.AnyError != nil, "AnyError must be non-nil")
+		assert.That(t, assert.AnyError.Error() == "<any error>", "AnyError sentinel string")
+	})
+}
+
+func TestErrorIs(t *testing.T) {
+	t.Run("both nil", func(t *testing.T) {
+		tt := &myT{}
+		assert.ErrorIs(tt, nil, nil)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("same sentinel", func(t *testing.T) {
+		tt := &myT{}
+		sentinel := fmt.Errorf("boom")
+		assert.ErrorIs(tt, sentinel, sentinel)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("wrapped sentinel matches", func(t *testing.T) {
+		tt := &myT{}
+		sentinel := fmt.Errorf("boom")
+		wrapped := fmt.Errorf("ctx: %w", sentinel)
+		assert.ErrorIs(tt, wrapped, sentinel)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("distinct errors with same message do not match", func(t *testing.T) {
+		tt := &myT{}
+		assert.ErrorIs(tt, fmt.Errorf("boom"), fmt.Errorf("boom"))
+		assert.That(t, tt.Failed(), "expected fail")
+	})
+	t.Run("nil err with non-nil expected", func(t *testing.T) {
+		tt := &myT{}
+		assert.ErrorIs(tt, nil, fmt.Errorf("boom"))
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "got no error")
+	})
+	t.Run("non-nil err with nil expected", func(t *testing.T) {
+		tt := &myT{}
+		assert.ErrorIs(tt, fmt.Errorf("boom"), nil)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "expected no error")
 	})
 }
 
