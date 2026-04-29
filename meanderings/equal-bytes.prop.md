@@ -1,3 +1,9 @@
+---
+status: open
+date: 2026-04-27
+description: `EqualBytes` / `EqualText` with diff-friendly failure rendering
+---
+
 # Proposal: `assert.EqualBytes` / `assert.EqualText` for `github.com/lczyk/assert`
 
 ## Motivation
@@ -27,8 +33,8 @@ func bytesEqual(t *testing.T, got, want []byte, msg string) {
 }
 ```
 
-This is exactly the wrapper we wrote in `integration/helpers.go`. We've now
-seen the same shape across multiple projects — it should live in `assert`.
+This is exactly the wrapper written in `integration/helpers.go`. The same
+shape has surfaced across multiple projects.
 
 ## Concrete pain example
 
@@ -44,7 +50,7 @@ and useless for anything realistic (a 30-line `go.mod`).
 
 ## Proposal
 
-Add two thin helpers, one each for the two domains we hit:
+Two helpers, one each for the two domains:
 
 ```go
 // EqualBytes asserts that got and want are byte-equal. On failure it renders
@@ -59,10 +65,10 @@ func EqualBytes(t testing.TB, got, want []byte, args ...any)
 func EqualText(t testing.TB, got, want string, args ...any)
 ```
 
-`EqualBytes` is the byte-slice counterpart most projects need; `EqualText` is
-the natural form when callers already have strings (config files, generated
-output, snapshot fixtures). `EqualBytes` can delegate to `EqualText` when
-both sides are valid UTF-8, otherwise fall back to a fixed-width hex diff.
+`EqualBytes` is the byte-slice form; `EqualText` is for callers that
+already have strings (config files, generated output, snapshot
+fixtures). `EqualBytes` could delegate to `EqualText` when both sides
+are valid UTF-8, and fall back to a fixed-width hex diff otherwise.
 
 ## Failure output sketch
 
@@ -103,27 +109,24 @@ want: 89 50 4e 47 0d 0a 1a 0a  00 00 00 0d 49 48 44 52  ...
 The exact format is bikesheddable; the contract is "show me where they
 differ, not just *that* they differ".
 
-## Companion: `assert.Fail`
+## Side note: `assert.Fail`
 
-Smaller but related: during the same refactor we found ourselves writing
+Independent but surfaced alongside this proposal. To flag an
+unreachable branch the current spelling is:
 
 ```go
 assert.That(t, false, "require %s not found", mod)
 ```
 
-to flag an unreachable branch. `assert.That(t, false, ...)` reads as a riddle
-on first encounter. A two-line helper would clarify intent:
+A direct form:
 
 ```go
-// Fail unconditionally records a test failure with the given message. The
-// args are forwarded to the failure message in printf style, matching
-// That/NoError.
+// Fail unconditionally records a test failure with the given message.
+// args are forwarded printf-style, matching That/NoError.
 func Fail(t testing.TB, args ...any)
 ```
 
-This is independent of `EqualBytes` and could land separately, but it falls
-out of the same observation: callers reach for `That(false, ...)` because
-there's no direct way to spell "I've already decided this is a failure."
+Independent of `EqualBytes`; could land separately.
 
 ## Naming notes
 
@@ -135,40 +138,40 @@ there's no direct way to spell "I've already decided this is a failure."
   string type, which would be misleading since the failure rendering is
   fundamentally different.
 
-## Scope / non-goals
+## Scope notes
 
-- No structural diff for arbitrary types. `EqualBytes`/`EqualText` are
-  text/binary specific. A general `Diff` helper for structs is a much larger
-  proposal and out of scope here.
-- No coloured output. Tests run in many environments (CI, IDE panels,
-  plain stdout); colour is an opinion and we shouldn't bake it in. If
-  someone wants colour, that's a wrapper above this layer.
-- No third-party diff dependency. A hand-rolled Myers diff is ~100 lines and
-  has no external imports. Keeping `assert` zero-dep is part of why people
-  pick it; a diff helper that pulls in a 4 MB module for one test convenience
-  would betray that.
+- Structural diff for arbitrary types is out of scope here —
+  `EqualBytes` / `EqualText` are text/binary specific.
+- Coloured output: tests run in many environments (CI, IDE panels,
+  plain stdout). Whether to bake colour in is an open question.
+- Diff dependency: a hand-rolled Myers diff is ~100 lines and has no
+  external imports. `go-cmp` would pull in a ~4 MB module. The
+  zero-dep status of `assert` is a design tension here.
 
 ## Implementation notes
 
-- Existing `EqualLineByLine` already does the line split + first-mismatch
-  walk; `EqualText` extends that to emit a windowed diff with context.
-- Suggested placement: extend `interface.go` with the two new functions; put
-  the diff implementation in a new `internal/textdiff/textdiff.go` so the
-  public API surface stays narrow.
+- Existing `EqualLineByLine` already does the line split +
+  first-mismatch walk; `EqualText` could extend that to emit a windowed
+  diff with context.
+- Possible placement: extend `interface.go` with the new functions; put
+  the diff implementation in `internal/textdiff/textdiff.go` to keep
+  the public API narrow.
 - The optional `args ...any` "prelude" formatting is identical to what
-  `NoError(t, err, args...)` already does — reuse `argsToMessage`.
+  `NoError(t, err, args...)` already does — `argsToMessage` is reusable.
 
 ## Migration
 
-Once these helpers land, downstream wrappers can drop:
+Downstream wrappers like:
 
 ```go
-// before
 func bytesEqual(t *testing.T, got, want []byte, msg string) { ... }
 bytesEqual(t, gotMod, wantMod, "go.mod after roundtrip")
+```
 
-// after
+would become:
+
+```go
 assert.EqualBytes(t, gotMod, wantMod, "go.mod after roundtrip")
 ```
 
-No breaking changes. Both helpers are additive.
+Both helpers are additive — no breaking changes to the existing API.

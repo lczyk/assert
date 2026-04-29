@@ -56,3 +56,10 @@ multi-line calls). Output is the point — the tests are tag-gated
 
 The runner is [`demo/demo_runner.sh`](demo/demo_runner.sh); demos are
 auto-discovered by grepping `^func TestDemo` from `demos_test.go`.
+
+## dev
+
+There is a bunch of design meanderings in [meanderings/](meanderings/); some
+are implemented, some shelved, some rejected. **NOT ALL SHOULD ship** —
+these are just meanderings after all. See [meanderings/README.md](meanderings/README.md)
+for the index with statuses.
