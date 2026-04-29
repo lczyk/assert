@@ -44,7 +44,11 @@ func assert(t testing.TB, N int, predicate bool, args []any) {
 	if !predicate {
 		file, line := getParentInfo(N)
 		msg := argsToMessage(func() string { return "assertion failed" }, args)
-		t.Errorf(msg+" in %s:%d", file, line)
+		if loc, err := locStr(file, line); err != nil {
+			t.Errorf(msg+" in %s:%d", file, line)
+		} else {
+			t.Errorf("%s in %s", msg, loc)
+		}
 	}
 }
 
@@ -60,7 +64,11 @@ func assert_error(t testing.TB, N int, err error, expected any, args []any) {
 		if msg_fun != nil {
 			msg := argsToMessage(msg_fun, args)
 			file, line := getParentInfo(N)
+			if loc, err := locStr(file, line); err != nil {
 			t.Errorf(msg+" in %s:%d", file, line)
+		} else {
+			t.Errorf("%s in %s", msg, loc)
+		}
 		}
 		return
 	}
@@ -128,7 +136,11 @@ func assert_error(t testing.TB, N int, err error, expected any, args []any) {
 	if msg_fun != nil {
 		msg := argsToMessage(msg_fun, args)
 		file, line := getParentInfo(N)
-		t.Errorf(msg+" in %s:%d", file, line)
+		if loc, err := locStr(file, line); err != nil {
+			t.Errorf(msg+" in %s:%d", file, line)
+		} else {
+			t.Errorf("%s in %s", msg, loc)
+		}
 	}
 }
 
@@ -141,7 +153,11 @@ func equal_cmp[T any](t testing.TB, N int, a T, b T, comparator func(T, T) bool,
 	msg := argsToMessage(func() string {
 		return fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b)
 	}, args)
-	t.Errorf(msg+" in %s:%d", file, line)
+	if loc, err := locStr(file, line); err != nil {
+		t.Errorf(msg+" in %s:%d", file, line)
+	} else {
+		t.Errorf("%s in %s", msg, loc)
+	}
 }
 
 func equal_cmp_any(t testing.TB, N int, a any, b any, comparator func(any, any) bool, args []any) {
@@ -149,7 +165,11 @@ func equal_cmp_any(t testing.TB, N int, a any, b any, comparator func(any, any) 
 		if r := recover(); r != nil {
 			// If the comparator panics, we want to catch it and report it as a test failure.
 			file, line := getParentInfo(4)
-			t.Errorf("Comparator panicked: %v in %s:%d", r, file, line)
+			if loc, err := locStr(file, line); err != nil {
+				t.Errorf("Comparator panicked: %v in %s:%d", r, file, line)
+			} else {
+				t.Errorf("Comparator panicked: %v in %s", r, loc)
+			}
 		}
 	}()
 	t.Helper()
@@ -160,7 +180,11 @@ func equal_cmp_any(t testing.TB, N int, a any, b any, comparator func(any, any) 
 	msg := argsToMessage(func() string {
 		return fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b)
 	}, args)
-	t.Errorf(msg+" in %s:%d", file, line)
+	if loc, err := locStr(file, line); err != nil {
+		t.Errorf(msg+" in %s:%d", file, line)
+	} else {
+		t.Errorf("%s in %s", msg, loc)
+	}
 }
 
 // isNil handles the typed-nil-in-interface case: var p *T = nil; var i any = p
@@ -187,7 +211,11 @@ func assert_type[T any](t testing.TB, N int, obj any, args ...any) T {
 		msg := argsToMessage(func() string {
 			return fmt.Sprintf("expected type %T, got %T", (*T)(nil), obj)
 		}, args)
-		t.Errorf(msg+" in %s:%d", file, line)
+		if loc, err := locStr(file, line); err != nil {
+			t.Errorf(msg+" in %s:%d", file, line)
+		} else {
+			t.Errorf("%s in %s", msg, loc)
+		}
 	}
 	return *new(T)
 }

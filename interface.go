@@ -68,7 +68,11 @@ func ErrorIs(t testing.TB, err error, expected error, args ...any) {
 		}
 		return fmt.Sprintf("expected errors.Is(%v, %v) to be true, got err='%v' (%T)", err, expected, err, err)
 	}, args)
-	t.Errorf(msg+" in %s:%d", file, line)
+	if loc, err := locStr(file, line); err != nil {
+		t.Errorf(msg+" in %s:%d", file, line)
+	} else {
+		t.Errorf("%s in %s", msg, loc)
+	}
 }
 
 // Compare two values using a custom comparator function.
@@ -110,7 +114,11 @@ func Nil(t testing.TB, x any, args ...any) {
 	}
 	file, line := getParentInfo(1)
 	msg := argsToMessage(func() string { return fmt.Sprintf("expected nil, got '%v' (%T)", x, x) }, args)
-	t.Errorf(msg+" in %s:%d", file, line)
+	if loc, err := locStr(file, line); err != nil {
+		t.Errorf(msg+" in %s:%d", file, line)
+	} else {
+		t.Errorf("%s in %s", msg, loc)
+	}
 }
 
 // Assert that x is not nil. Handles typed-nil-in-interface.
@@ -121,7 +129,11 @@ func NotNil(t testing.TB, x any, args ...any) {
 	}
 	file, line := getParentInfo(1)
 	msg := argsToMessage(func() string { return fmt.Sprintf("expected non-nil, got nil (%T)", x) }, args)
-	t.Errorf(msg+" in %s:%d", file, line)
+	if loc, err := locStr(file, line); err != nil {
+		t.Errorf(msg+" in %s:%d", file, line)
+	} else {
+		t.Errorf("%s in %s", msg, loc)
+	}
 }
 
 // Assert that len(x) == n. x must be array, chan, map, slice, or string.
@@ -139,7 +151,11 @@ func Len(t testing.TB, x any, n int, args ...any) {
 	}
 	file, line := getParentInfo(1)
 	msg := argsToMessage(func() string { return fmt.Sprintf("expected len %d, got len %d: %v", n, got, x) }, args)
-	t.Errorf(msg+" in %s:%d", file, line)
+	if loc, err := locStr(file, line); err != nil {
+		t.Errorf(msg+" in %s:%d", file, line)
+	} else {
+		t.Errorf("%s in %s", msg, loc)
+	}
 }
 
 func Type[T any](t testing.TB, obj any, args ...any) T {
