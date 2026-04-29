@@ -84,7 +84,7 @@ func assert_error(t testing.TB, N int, err error, expected any, args []any) {
 			re := regexp.MustCompile(expected)
 			if !re.MatchString(err.Error()) {
 				msg_fun = func() string {
-					return fmt.Sprintf("expected error to match '%s', got '%v' (%T)", expected, err, err)
+					return fmt.Sprintf("expected error to match '%s', got %s", expected, describeErr(err))
 				}
 			}
 		}
@@ -93,18 +93,18 @@ func assert_error(t testing.TB, N int, err error, expected any, args []any) {
 		if expected == nil {
 			if err != nil {
 				msg_fun = func() string {
-					return fmt.Sprintf("expected no error, got '%v' (%T)", err, err)
+					return fmt.Sprintf("expected no error, got %s", describeErr(err))
 				}
 			}
 		} else {
 			if err == nil {
 				msg_fun = func() string {
-					return fmt.Sprintf("expected error '%v' (%T), got no error (nil)", expected, expected)
+					return fmt.Sprintf("expected error %s, got no error (nil)", describeErr(expected))
 				}
 			} else {
 				if !compare.Errors(err, expected) && !compare.ErrorsIs(err, expected) {
 					msg_fun = func() string {
-						return fmt.Sprintf("expected error '%v' (%T), got '%v' (%T)", expected, expected, err, err)
+						return fmt.Sprintf("expected error %s, got %s", describeErr(expected), describeErr(err))
 					}
 				}
 			}
@@ -112,7 +112,7 @@ func assert_error(t testing.TB, N int, err error, expected any, args []any) {
 	case nil:
 		if err != nil {
 			msg_fun = func() string {
-				return fmt.Sprintf("expected no error, got '%v' (%T)", err, err)
+				return fmt.Sprintf("expected no error, got %s", describeErr(err))
 			}
 		}
 	case *regexp.Regexp:
@@ -124,7 +124,7 @@ func assert_error(t testing.TB, N int, err error, expected any, args []any) {
 			re := regexp.MustCompile(expected.String())
 			if !re.MatchString(err.Error()) {
 				msg_fun = func() string {
-					return fmt.Sprintf("expected error to match '%s', got '%v' (%T)", expected, err, err)
+					return fmt.Sprintf("expected error to match '%s', got %s", expected, describeErr(err))
 				}
 			}
 		}
@@ -185,6 +185,28 @@ func equal_cmp_any(t testing.TB, N int, a any, b any, comparator func(any, any) 
 	} else {
 		t.Errorf("%s in %s", msg, loc)
 	}
+}
+
+// describeErr formats an error for failure messages. Suppresses the
+// universal *errors.errorString / *fmt.wrapError type tags as noise;
+// keeps the type for custom error types where it's informative.
+func describeErr(e error) string {
+	t := fmt.Sprintf("%T", e)
+	if t == "*errors.errorString" || t == "*fmt.wrapError" {
+		return fmt.Sprintf("'%v'", e)
+	}
+	return fmt.Sprintf("'%v' (%s)", e, t)
+}
+
+// describeNonNil formats a non-nil value for failure messages.
+// For pointers it shows the pointed-to value rather than the address,
+// which is more useful when debugging assertions.
+func describeNonNil(x any) string {
+	v := reflect.ValueOf(x)
+	if v.Kind() == reflect.Pointer && !v.IsNil() {
+		return fmt.Sprintf("'%v' (%T)", v.Elem().Interface(), x)
+	}
+	return fmt.Sprintf("'%v' (%T)", x, x)
 }
 
 // isNil handles the typed-nil-in-interface case: var p *T = nil; var i any = p

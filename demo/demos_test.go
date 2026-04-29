@@ -81,3 +81,8 @@ func TestDemoContainsString(t *testing.T) {
 func TestDemoPanic(t *testing.T) {
 	assert.Panic(t, func() { /* no panic */ }, nil)
 }
+
+// And one passing case, as a cherry on top
+func TestDemoPassing(t *testing.T) {
+	assert.Equal(t, 1, 1)
+}

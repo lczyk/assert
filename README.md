@@ -27,3 +27,32 @@ func TestExample(t *testing.T) {
 ```
 
 Not a big difference but over the course of a large test suite it adds up.
+
+## Design
+
+This package is a **thin wrapper** over Go's standard `testing` framework — no
+custom runner, no parallel reporting layer, no DSL. Every assertion ultimately
+calls `t.Errorf` (or `t.Helper`) on the `testing.TB` you pass in. That's why
+`t` is the first argument to every assertion: nothing here works without it,
+because there is nothing else to fall back on.
+
+Consequences:
+
+- Plays nicely with `go test`, `-run`, `-v`, `-race`, `t.Run` subtests, table
+  tests, parallel tests — all unchanged.
+- Failures are soft (`t.Errorf`); the test continues. Use `t.Fatal` yourself
+  if you need fail-fast semantics.
+- No state hidden in package globals (besides a tiny source-line cache for
+  failure rendering). Each assertion stands alone.
+- Drop-in: you can mix `assert.Equal(t, ...)` and raw `if a != b { t.Errorf(...) }`
+  in the same test without conflict.
+
+## Demos
+
+`make demo` runs a suite of intentionally-failing tests under `demo/` to show
+off failure output (message + `file:line` + source-line snippet, including
+multi-line calls). Output is the point — the tests are tag-gated
+(`//go:build demo`) so a normal `go test ./...` stays clean.
+
+The runner is [`demo/demo_runner.sh`](demo/demo_runner.sh); demos are
+auto-discovered by grepping `^func TestDemo` from `demos_test.go`.

@@ -61,12 +61,12 @@ func ErrorIs(t testing.TB, err error, expected error, args ...any) {
 	file, line := getParentInfo(1)
 	msg := argsToMessage(func() string {
 		if err == nil {
-			return fmt.Sprintf("expected error '%v' (%T), got no error (nil)", expected, expected)
+			return fmt.Sprintf("expected error %s, got no error (nil)", describeErr(expected))
 		}
 		if expected == nil {
-			return fmt.Sprintf("expected no error, got '%v' (%T)", err, err)
+			return fmt.Sprintf("expected no error, got %s", describeErr(err))
 		}
-		return fmt.Sprintf("expected errors.Is(%v, %v) to be true, got err='%v' (%T)", err, expected, err, err)
+		return fmt.Sprintf("expected errors.Is('%v', '%v') to be true, got %s", err, expected, describeErr(err))
 	}, args)
 	if loc, err := locStr(file, line); err != nil {
 		t.Errorf(msg+" in %s:%d", file, line)
@@ -113,7 +113,7 @@ func Nil(t testing.TB, x any, args ...any) {
 		return
 	}
 	file, line := getParentInfo(1)
-	msg := argsToMessage(func() string { return fmt.Sprintf("expected nil, got '%v' (%T)", x, x) }, args)
+	msg := argsToMessage(func() string { return fmt.Sprintf("expected nil, got %s", describeNonNil(x)) }, args)
 	if loc, err := locStr(file, line); err != nil {
 		t.Errorf(msg+" in %s:%d", file, line)
 	} else {

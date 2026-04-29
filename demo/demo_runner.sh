@@ -19,5 +19,3 @@ for d in "${demos[@]}"; do
 	$GOTEST -tags demo -run "^${d}\$" . || true
 done
 
-printf '\n=== Examples (passing) ===\n'
-$GOTEST -v -run Example . || true
