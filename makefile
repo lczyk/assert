@@ -12,6 +12,10 @@ test:  ## Run the test suite
 		go test ./...; \
 	fi
 
+.PHONY: bench
+bench:  ## Run benchmarks (override scope/duration: PKG=… BENCH=… BENCHTIME=…)
+	go test -run '^$$' -bench '$(or $(BENCH),.)' -benchmem -benchtime '$(or $(BENCHTIME),1s)' $(or $(PKG),./...)
+
 .PHONY: cover
 cover:  ## Coverage profile + HTML file (cover.out, cover.html)
 	go test -coverpkg=./... -coverprofile=cover.out ./...
