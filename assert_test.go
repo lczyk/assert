@@ -602,6 +602,55 @@ func TestErrorStringLiteralNotRegex(t *testing.T) {
 	})
 }
 
+func TestNearlyEqual(t *testing.T) {
+	t.Run("float within tolerance", func(t *testing.T) {
+		tt := &myT{}
+		assert.NearlyEqual(tt, 1.0, 1.0+1e-9, 1e-6)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("float exactly at tolerance", func(t *testing.T) {
+		tt := &myT{}
+		assert.NearlyEqual(tt, 1.0, 1.5, 0.5)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("float exceeds tolerance", func(t *testing.T) {
+		tt := &myT{}
+		assert.NearlyEqual(tt, 1.0, 2.0, 0.5)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "nearly equal")
+		assert.ContainsString(t, tt.message, "tolerance 0.5")
+	})
+	t.Run("got less than want", func(t *testing.T) {
+		tt := &myT{}
+		assert.NearlyEqual(tt, 5, 7, 3)
+		assert.That(t, !tt.Failed(), "expected pass (|5-7|=2 <= 3)")
+	})
+	t.Run("integer types", func(t *testing.T) {
+		tt := &myT{}
+		assert.NearlyEqual(tt, 100, 105, 10)
+		assert.That(t, !tt.Failed(), "expected pass")
+	})
+	t.Run("unsigned types", func(t *testing.T) {
+		tt := &myT{}
+		assert.NearlyEqual(tt, uint(3), uint(7), uint(5))
+		assert.That(t, !tt.Failed(), "expected pass (unsigned, want > got)")
+	})
+	t.Run("zero tolerance is exact equality", func(t *testing.T) {
+		tt := &myT{}
+		assert.NearlyEqual(tt, 1.0, 1.0, 0.0)
+		assert.That(t, !tt.Failed(), "expected pass")
+		tt2 := &myT{}
+		assert.NearlyEqual(tt2, 1.0, 1.0001, 0.0)
+		assert.That(t, tt2.Failed(), "expected fail")
+	})
+	t.Run("custom message", func(t *testing.T) {
+		tt := &myT{}
+		assert.NearlyEqual(tt, 1.0, 2.0, 0.1, "case %s", "alpha")
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "case alpha")
+	})
+}
+
 func TestErrorStringMismatch(t *testing.T) {
 	// String arg = literal substring match (strings.Contains). When err's
 	// message doesn't contain the substring, the assertion fails.

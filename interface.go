@@ -30,6 +30,40 @@ func NotEqual[T comparable](t testing.TB, a T, b T) {
 	fail_here(t, 1, fmt.Sprintf("expected '%v' (%T) != '%v' (%T)", a, a, b, b))
 }
 
+// numeric covers built-in integer and float kinds (and named types
+// based on them). Used as the constraint for NearlyEqual; not exported
+// because no external caller needs to use it as a type bound.
+type numeric interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 |
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr |
+		~float32 | ~float64
+}
+
+// NearlyEqual asserts that |got - want| <= tolerance. Generic over
+// numeric types. NaN comparisons always fail (NaN is not nearly equal
+// to anything, including itself).
+func NearlyEqual[T numeric](t testing.TB, got T, want T, tolerance T, args ...any) {
+	t.Helper()
+	var diff T
+	if got >= want {
+		diff = got - want
+	} else {
+		diff = want - got
+	}
+	if diff <= tolerance {
+		return
+	}
+	file, line := get_parent_info(1)
+	msg := args_to_message(func() string {
+		return fmt.Sprintf("expected '%v' nearly equal to '%v' (tolerance %v), got diff %v", got, want, tolerance, diff)
+	}, args)
+	if loc, err := loc_str(file, line); err != nil {
+		t.Errorf(msg+" in %s:%d", file, line)
+	} else {
+		t.Errorf("%s in %s", msg, loc)
+	}
+}
+
 // Assert that error is nil.
 func NoError(t testing.TB, err error, args ...any) {
 	t.Helper()
