@@ -11,22 +11,18 @@ import (
 	"github.com/lczyk/assert/compare"
 )
 
-// fail_here reports msg with the source location of the caller N frames up.
-// Use this from the success-path-fast helpers so we only build the message
-// (Sprintf, slice literal, etc.) on actual failure.
-func fail_here(t testing.TB, N int, msg string) {
-	t.Helper()
-	file, line := get_parent_info(N + 1)
-	if loc, err := loc_str(file, line); err != nil {
-		t.Errorf(msg+" in %s:%d", file, line)
-	} else {
-		t.Errorf("%s in %s", msg, loc)
-	}
-}
-
 func get_parent_info(N int) (string, int) {
 	parent, _, _, _ := runtime.Caller(1 + N)
 	return runtime.FuncForPC(parent).FileLine(parent)
+}
+
+// numeric covers built-in integer and float kinds (and named types
+// based on them). Used as the constraint for NearlyEqual; not exported
+// because no external caller needs to use it as a type bound.
+type numeric interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 |
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr |
+		~float32 | ~float64
 }
 
 // convert 'args ...any' to the assertion message

@@ -170,6 +170,12 @@ func TestEqual(t *testing.T) {
 		assert.ContainsString(t, tt.message, "expected '1'")
 		assert.ContainsString(t, tt.message, "'2'")
 	})
+	t.Run("custom message", func(t *testing.T) {
+		tt := &myT{}
+		assert.Equal(tt, 1, 2, "case %s", "alpha")
+		assert.That(t, tt.Failed())
+		assert.ContainsString(t, tt.message, "case alpha")
+	})
 }
 
 func TestNotEqual(t *testing.T) {
@@ -182,6 +188,12 @@ func TestNotEqual(t *testing.T) {
 		tt := &myT{}
 		assert.NotEqual(tt, 1, 1)
 		assert.That(t, tt.Failed())
+	})
+	t.Run("custom message", func(t *testing.T) {
+		tt := &myT{}
+		assert.NotEqual(tt, 1, 1, "case %s", "beta")
+		assert.That(t, tt.Failed())
+		assert.ContainsString(t, tt.message, "case beta")
 	})
 }
 
@@ -246,6 +258,12 @@ func TestContainsString(t *testing.T) {
 		assert.That(t, tt.Failed())
 		assert.ContainsString(t, tt.message, "lemons")
 		assert.ContainsString(t, tt.message, "hello world")
+	})
+	t.Run("custom message", func(t *testing.T) {
+		tt := &myT{}
+		assert.ContainsString(tt, "hello world", "lemons", "case %s", "delta")
+		assert.That(t, tt.Failed())
+		assert.ContainsString(t, tt.message, "case delta")
 	})
 }
 
@@ -315,21 +333,36 @@ func TestEqualLineByLine(t *testing.T) {
 		tt := &myT{}
 		assert.EqualLineByLine(tt, "a\nb\nc", "a\nX\nc")
 		assert.That(t, tt.Failed(), "expected fail")
-		assert.ContainsString(t, tt.message, "expected line 2 to be 'b', got 'X'")
+		assert.ContainsString(t, tt.message, "line 2: expected 'b', got 'X'")
 	})
 
 	t.Run("differing first line", func(t *testing.T) {
 		tt := &myT{}
 		assert.EqualLineByLine(tt, "x\ny", "a\ny")
 		assert.That(t, tt.Failed(), "expected fail")
-		assert.ContainsString(t, tt.message, "expected line 1 to be 'x', got 'a'")
+		assert.ContainsString(t, tt.message, "line 1: expected 'x', got 'a'")
 	})
 
 	t.Run("differing last line", func(t *testing.T) {
 		tt := &myT{}
 		assert.EqualLineByLine(tt, "a\nb\nc", "a\nb\nZ")
 		assert.That(t, tt.Failed(), "expected fail")
-		assert.ContainsString(t, tt.message, "expected line 3 to be 'c', got 'Z'")
+		assert.ContainsString(t, tt.message, "line 3: expected 'c', got 'Z'")
+	})
+
+	t.Run("multiple mismatches reported once", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualLineByLine(tt, "a\nb\nc", "X\nb\nZ")
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "line 1: expected 'a', got 'X'")
+		assert.ContainsString(t, tt.message, "line 3: expected 'c', got 'Z'")
+	})
+
+	t.Run("custom message", func(t *testing.T) {
+		tt := &myT{}
+		assert.EqualLineByLine(tt, "a\nb", "a\nX", "case %s", "gamma")
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "case gamma")
 	})
 }
 
@@ -599,6 +632,50 @@ func TestErrorStringLiteralNotRegex(t *testing.T) {
 		tt := &myT{}
 		assert.Error(tt, fmt.Errorf("X-Y mismatch"), "X.Y")
 		assert.That(t, tt.Failed(), "expected fail (literal 'X.Y' not in 'X-Y mismatch')")
+	})
+}
+
+func TestHasKey(t *testing.T) {
+	t.Run("string key present", func(t *testing.T) {
+		tt := &myT{}
+		m := map[string]int{"a": 1, "b": 2}
+		assert.HasKey(tt, m, "a")
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("string key absent", func(t *testing.T) {
+		tt := &myT{}
+		m := map[string]int{"a": 1, "b": 2}
+		assert.HasKey(tt, m, "c")
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "expected key 'c'")
+	})
+	t.Run("int key", func(t *testing.T) {
+		tt := &myT{}
+		m := map[int]string{1: "x", 2: "y"}
+		assert.HasKey(tt, m, 1)
+		assert.That(t, !tt.Failed())
+	})
+	t.Run("empty map", func(t *testing.T) {
+		tt := &myT{}
+		m := map[string]int{}
+		assert.HasKey(tt, m, "any")
+		assert.That(t, tt.Failed())
+		assert.ContainsString(t, tt.message, "expected key 'any'")
+	})
+	t.Run("custom message", func(t *testing.T) {
+		tt := &myT{}
+		assert.HasKey(tt, map[string]int{}, "k", "case %s", "epsilon")
+		assert.That(t, tt.Failed())
+		assert.ContainsString(t, tt.message, "case epsilon")
+	})
+	t.Run("zero-value V (any) does not falsely pass on missing", func(t *testing.T) {
+		// Regression: comma-ok lookup, not value comparison. A map with a
+		// zero V at key K should pass HasKey(K); a map missing K should fail
+		// even if V's zero would equal something.
+		tt := &myT{}
+		m := map[string]*int{"present": nil} // value is nil but key is present
+		assert.HasKey(tt, m, "present")
+		assert.That(t, !tt.Failed(), "expected pass on present-but-nil-value")
 	})
 }
 

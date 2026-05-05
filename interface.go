@@ -14,29 +14,36 @@ func That(t testing.TB, predicate bool, args ...any) {
 	assert(t, nested_assert_parent, predicate, args)
 }
 
-func Equal[T comparable](t testing.TB, a T, b T) {
+func Equal[T comparable](t testing.TB, a T, b T, args ...any) {
 	t.Helper()
 	if a == b {
 		return
 	}
-	fail_here(t, 1, fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b))
+	file, line := get_parent_info(1)
+	msg := args_to_message(func() string {
+		return fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b)
+	}, args)
+	if loc, err := loc_str(file, line); err != nil {
+		t.Errorf(msg+" in %s:%d", file, line)
+	} else {
+		t.Errorf("%s in %s", msg, loc)
+	}
 }
 
-func NotEqual[T comparable](t testing.TB, a T, b T) {
+func NotEqual[T comparable](t testing.TB, a T, b T, args ...any) {
 	t.Helper()
 	if a != b {
 		return
 	}
-	fail_here(t, 1, fmt.Sprintf("expected '%v' (%T) != '%v' (%T)", a, a, b, b))
-}
-
-// numeric covers built-in integer and float kinds (and named types
-// based on them). Used as the constraint for NearlyEqual; not exported
-// because no external caller needs to use it as a type bound.
-type numeric interface {
-	~int | ~int8 | ~int16 | ~int32 | ~int64 |
-		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr |
-		~float32 | ~float64
+	file, line := get_parent_info(1)
+	msg := args_to_message(func() string {
+		return fmt.Sprintf("expected '%v' (%T) != '%v' (%T)", a, a, b, b)
+	}, args)
+	if loc, err := loc_str(file, line); err != nil {
+		t.Errorf(msg+" in %s:%d", file, line)
+	} else {
+		t.Errorf("%s in %s", msg, loc)
+	}
 }
 
 // NearlyEqual asserts that |got - want| <= tolerance. Generic over
@@ -206,7 +213,7 @@ func Type[T any](t testing.TB, obj any, args ...any) T {
 	return assert_type[T](t, nested_assert_parent, obj, args...)
 }
 
-func EqualLineByLine(t testing.TB, a string, b string) {
+func EqualLineByLine(t testing.TB, a string, b string, args ...any) {
 	t.Helper()
 	// Ignore a single trailing newline on either side so comparing file-like
 	// content to a literal doesn't fail on an incidental EOF newline.
@@ -214,23 +221,69 @@ func EqualLineByLine(t testing.TB, a string, b string) {
 	b = strings.TrimSuffix(b, "\n")
 	a_lines := strings.Split(a, "\n")
 	b_lines := strings.Split(b, "\n")
+	var msg_fun func() string
 	if len(a_lines) != len(b_lines) {
-		fail_here(t, 1, fmt.Sprintf("expected '%d' lines, got '%d'", len(a_lines), len(b_lines)))
-		return // no point in checking the lines if the number of lines is different
-	}
-	for i := range a_lines {
-		if a_lines[i] != b_lines[i] {
-			fail_here(t, 1, fmt.Sprintf("expected line %d to be '%s', got '%s'", i+1, a_lines[i], b_lines[i]))
+		msg_fun = func() string {
+			return fmt.Sprintf("expected '%d' lines, got '%d'", len(a_lines), len(b_lines))
 		}
+	} else {
+		var mismatches []string
+		for i := range a_lines {
+			if a_lines[i] != b_lines[i] {
+				mismatches = append(mismatches, fmt.Sprintf("line %d: expected '%s', got '%s'", i+1, a_lines[i], b_lines[i]))
+			}
+		}
+		if len(mismatches) > 0 {
+			msg_fun = func() string { return strings.Join(mismatches, "; ") }
+		}
+	}
+	if msg_fun == nil {
+		return
+	}
+	file, line := get_parent_info(1)
+	msg := args_to_message(msg_fun, args)
+	if loc, err := loc_str(file, line); err != nil {
+		t.Errorf(msg+" in %s:%d", file, line)
+	} else {
+		t.Errorf("%s in %s", msg, loc)
 	}
 }
 
-func ContainsString(t testing.TB, haystack string, needle string) {
+// HasKey asserts that m contains key k.
+func HasKey[K comparable, V any](t testing.TB, m map[K]V, k K, args ...any) {
+	t.Helper()
+	if _, ok := m[k]; ok {
+		return
+	}
+	file, line := get_parent_info(1)
+	msg := args_to_message(func() string {
+		keys := make([]K, 0, len(m))
+		for kk := range m {
+			keys = append(keys, kk)
+		}
+		return fmt.Sprintf("expected key '%v' (%T) in map, got keys %v", k, k, keys)
+	}, args)
+	if loc, err := loc_str(file, line); err != nil {
+		t.Errorf(msg+" in %s:%d", file, line)
+	} else {
+		t.Errorf("%s in %s", msg, loc)
+	}
+}
+
+func ContainsString(t testing.TB, haystack string, needle string, args ...any) {
 	t.Helper()
 	if strings.Contains(haystack, needle) {
 		return
 	}
-	fail_here(t, 1, fmt.Sprintf("expected needle string '%s' to be in a haystack string '%s'", needle, haystack))
+	file, line := get_parent_info(1)
+	msg := args_to_message(func() string {
+		return fmt.Sprintf("expected needle string '%s' to be in a haystack string '%s'", needle, haystack)
+	}, args)
+	if loc, err := loc_str(file, line); err != nil {
+		t.Errorf(msg+" in %s:%d", file, line)
+	} else {
+		t.Errorf("%s in %s", msg, loc)
+	}
 }
 
 func Panic(t testing.TB, f func(), f_recover func(t testing.TB, rec any), args ...any) {
