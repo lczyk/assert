@@ -47,10 +47,9 @@ var AnyError error = anyErr{}
 //   - AnyError: passes for any non-nil err
 //   - error: structural match (same dynamic type and Error() string),
 //     OR errors.Is wrap-chain match. ErrorIs is the strict-wrap-chain variant.
-//   - string: regex pattern, matched as a substring against err.Error()
-//     (regexp.MustCompile(s).MatchString(err.Error())). Note that this is
-//     NOT an exact-equality check — anchor with ^...$ if you need that.
-//     Special characters (.()?+ etc.) are interpreted as regex metacharacters.
+//   - string: literal substring match against err.Error()
+//     (strings.Contains). Empty string matches any non-nil err
+//     (equivalent to AnyError). For regex matching, pass *regexp.Regexp.
 //   - *regexp.Regexp: regex pattern, matched as a substring against err.Error()
 func Error(t testing.TB, err error, expected any, args ...any) {
 	t.Helper()

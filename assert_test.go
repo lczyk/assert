@@ -481,7 +481,7 @@ func TestErrorStringNilErrNonEmpty(t *testing.T) {
 	tt := &myT{}
 	assert.Error(tt, nil, "boom")
 	assert.That(t, tt.Failed(), "expected fail")
-	assert.ContainsString(t, tt.message, "expected error to match 'boom'")
+	assert.ContainsString(t, tt.message, "expected error to contain 'boom'")
 	assert.ContainsString(t, tt.message, "got no error (nil)")
 }
 
@@ -573,13 +573,33 @@ func TestThatFailNoArgs(t *testing.T) {
 	assert.ContainsString(t, tt.message, "assertion failed")
 }
 
-func TestErrorStringRegexMismatch(t *testing.T) {
-	// Covers the "expected error to match" path when expected is a string
-	// (compiled as regex) and err's message doesn't match.
+func TestErrorStringLiteralNotRegex(t *testing.T) {
+	// String arg is matched literally, not as a regex. Metacharacters are
+	// not interpreted: pattern "a+" matches "a+b" but does NOT match "aaa".
+	t.Run("metachars treated literally - match", func(t *testing.T) {
+		tt := &myT{}
+		assert.Error(tt, fmt.Errorf("got a+b in input"), "a+b")
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("metachars treated literally - no superset match", func(t *testing.T) {
+		tt := &myT{}
+		assert.Error(tt, fmt.Errorf("got aaa in input"), "a+")
+		assert.That(t, tt.Failed(), "expected fail (literal 'a+' not in 'got aaa in input')")
+	})
+	t.Run("dot is literal", func(t *testing.T) {
+		tt := &myT{}
+		assert.Error(tt, fmt.Errorf("X-Y mismatch"), "X.Y")
+		assert.That(t, tt.Failed(), "expected fail (literal 'X.Y' not in 'X-Y mismatch')")
+	})
+}
+
+func TestErrorStringMismatch(t *testing.T) {
+	// String arg = literal substring match (strings.Contains). When err's
+	// message doesn't contain the substring, the assertion fails.
 	tt := &myT{}
 	assert.Error(tt, fmt.Errorf("boom"), "lemons")
 	assert.That(t, tt.Failed(), "expected fail")
-	assert.ContainsString(t, tt.message, "expected error to match 'lemons'")
+	assert.ContainsString(t, tt.message, "expected error to contain 'lemons'")
 	assert.ContainsString(t, tt.message, "boom")
 }
 

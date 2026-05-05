@@ -99,11 +99,11 @@ func ExampleError() {
 	assert.Error(t, errors.New("boom"), assert.AnyError)
 	fmt.Println(t.Failed())
 
-	// String expected: regex substring match against err.Error().
+	// String expected: literal substring match against err.Error().
 	assert.Error(t, errors.New("file not found"), "not found")
 	fmt.Println(t.Failed())
 
-	// *regexp.Regexp expected.
+	// *regexp.Regexp expected: regex match against err.Error().
 	assert.Error(t, errors.New("code 42"), regexp.MustCompile(`code \d+`))
 	fmt.Println(t.Failed())
 

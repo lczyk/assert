@@ -32,7 +32,7 @@ func TestDemoNoError(t *testing.T) {
 	assert.NoError(t, errors.New("disk on fire"))
 }
 
-func TestDemoErrorRegex(t *testing.T) {
+func TestDemoErrorContains(t *testing.T) {
 	assert.Error(t, errors.New("file not found"), "permission denied")
 }
 

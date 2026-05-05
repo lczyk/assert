@@ -5,24 +5,11 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
-	"sync"
+	"strings"
 	"testing"
 
 	"github.com/lczyk/assert/compare"
 )
-
-// regexCache memoizes compiled regex patterns supplied as strings to Error,
-// so the success path of repeated assertions avoids recompiling.
-var regexCache sync.Map // map[string]*regexp.Regexp
-
-func compile_cached(pattern string) *regexp.Regexp {
-	if v, ok := regexCache.Load(pattern); ok {
-		return v.(*regexp.Regexp)
-	}
-	re := regexp.MustCompile(pattern)
-	regexCache.Store(pattern, re)
-	return re
-}
 
 // fail_here reports msg with the source location of the caller N frames up.
 // Use this from the success-path-fast helpers so we only build the message
@@ -104,15 +91,11 @@ func assert_error(t testing.TB, N int, err error, expected any, args []any) {
 	case string:
 		if err == nil {
 			msg_fun = func() string {
-				return fmt.Sprintf("expected error to match '%s', got no error (nil)", expected)
+				return fmt.Sprintf("expected error to contain '%s', got no error (nil)", expected)
 			}
-		} else {
-			// Regex pattern matched as substring against err.Error().
-			re := compile_cached(expected)
-			if !re.MatchString(err.Error()) {
-				msg_fun = func() string {
-					return fmt.Sprintf("expected error to match '%s', got %s", expected, describe_err(err))
-				}
+		} else if !strings.Contains(err.Error(), expected) {
+			msg_fun = func() string {
+				return fmt.Sprintf("expected error to contain '%s', got %s", expected, describe_err(err))
 			}
 		}
 
