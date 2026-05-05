@@ -30,6 +30,7 @@
     "frontmatter",
     "funcs",
     "godep",
+    "goroutines",
     "godoc",
     "gofmt",
     "Goexit",
