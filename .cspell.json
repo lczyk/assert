@@ -18,6 +18,7 @@
     "benchmem",
     "benchtime",
     "bikesheddable",
+    "callsite",
     "coverpkg",
     "coverprofile",
     "difflib",
