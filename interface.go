@@ -163,6 +163,10 @@ func Len(t testing.TB, x any, n int, args ...any) {
 	}
 }
 
+// Type asserts that obj is of type T and returns the asserted value.
+// Unlike other assertions in this package, Type fails the test fatally
+// (t.Fatalf) on mismatch, since the returned zero value is a nil-deref
+// footgun for the caller.
 func Type[T any](t testing.TB, obj any, args ...any) T {
 	t.Helper()
 	return assert_type[T](t, nested_assert_parent, obj, args...)

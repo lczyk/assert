@@ -263,12 +263,12 @@ func ExampleType() {
 	s := assert.Type[string](t, v)
 	fmt.Println(s, t.Failed())
 
-	_ = assert.Type[int](t, v)
-	fmt.Println(t.Failed())
+	// Note: a Type assertion that fails calls t.Fatalf, which unwinds the
+	// test goroutine via runtime.Goexit. Cannot demonstrate that path in a
+	// linear godoc example.
 
 	// output:
 	// hello false
-	// true
 }
 
 func ExampleEqualLineByLine() {

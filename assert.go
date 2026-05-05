@@ -232,21 +232,22 @@ func is_nil(x any) bool {
 	return false
 }
 
-// Check that the type of obj is T.
+// Check that the type of obj is T. Fails the test fatally (t.Fatalf) on
+// mismatch -- Type[T] returns a T, and a soft-fail leaves the caller
+// with the zero value, which is a nil-deref footgun. Hard-fail by default.
 func assert_type[T any](t testing.TB, N int, obj any, args ...any) T {
 	t.Helper()
 	if obj_T, ok := obj.(T); ok {
 		return obj_T
+	}
+	file, line := get_parent_info(N)
+	msg := args_to_message(func() string {
+		return fmt.Sprintf("expected type %s, got %T", reflect.TypeOf((*T)(nil)).Elem(), obj)
+	}, args)
+	if loc, err := loc_str(file, line); err != nil {
+		t.Fatalf(msg+" in %s:%d", file, line)
 	} else {
-		file, line := get_parent_info(N)
-		msg := args_to_message(func() string {
-			return fmt.Sprintf("expected type %s, got %T", reflect.TypeOf((*T)(nil)).Elem(), obj)
-		}, args)
-		if loc, err := loc_str(file, line); err != nil {
-			t.Errorf(msg+" in %s:%d", file, line)
-		} else {
-			t.Errorf("%s in %s", msg, loc)
-		}
+		t.Fatalf("%s in %s", msg, loc)
 	}
 	return *new(T)
 }

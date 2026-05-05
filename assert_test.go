@@ -32,16 +32,17 @@ func (m *myThingImpl) SomeBehaviour() {}
 var _ myThing = &myThingImpl{}
 
 func TestType(t *testing.T) {
-	t.Run("fails", func(t *testing.T) {
-		tt := &testing.T{}
+	t.Run("fails fatally", func(t *testing.T) {
+		tt := &myT{}
 		assert.That(t, !tt.Failed())
 		var x int = 1
 		y := assert.Type[myThing](tt, x)
 		_ = y
 		assert.That(t, tt.Failed(), "Expected test to fail, but it did not")
+		assert.ContainsString(t, tt.message, "expected type")
 	})
 	t.Run("succeeds", func(t *testing.T) {
-		tt := &testing.T{}
+		tt := &myT{}
 		assert.That(t, !tt.Failed())
 		x := &myThingImpl{}
 		y := assert.Type[myThing](tt, x)
@@ -56,6 +57,14 @@ type myT struct {
 }
 
 func (t *myT) Errorf(format string, args ...any) {
+	t.message = fmt.Sprintf(format, args...)
+	t.Fail()
+}
+
+// Fatalf override: capture the message and mark Fail without invoking
+// runtime.Goexit (real testing.T.Fatalf would unwind the goroutine,
+// which breaks tests that assert on post-Fatalf state).
+func (t *myT) Fatalf(format string, args ...any) {
 	t.message = fmt.Sprintf(format, args...)
 	t.Fail()
 }
