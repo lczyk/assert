@@ -61,6 +61,7 @@
     "textdiff",
     "tradeoff",
     "tradeoffs",
+    "uintptr",
     "variadics"
   ]
 }
