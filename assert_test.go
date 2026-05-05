@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/lczyk/assert"
 )
@@ -632,6 +633,54 @@ func TestErrorStringLiteralNotRegex(t *testing.T) {
 		tt := &myT{}
 		assert.Error(tt, fmt.Errorf("X-Y mismatch"), "X.Y")
 		assert.That(t, tt.Failed(), "expected fail (literal 'X.Y' not in 'X-Y mismatch')")
+	})
+}
+
+func TestEventually(t *testing.T) {
+	t.Run("predicate true immediately", func(t *testing.T) {
+		tt := &myT{}
+		assert.Eventually(tt, func() bool { return true }, 100*time.Millisecond, 10*time.Millisecond)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("predicate becomes true after delay", func(t *testing.T) {
+		tt := &myT{}
+		started := time.Now()
+		assert.Eventually(tt, func() bool {
+			return time.Since(started) >= 30*time.Millisecond
+		}, 200*time.Millisecond, 10*time.Millisecond)
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("predicate never true fails with timeout", func(t *testing.T) {
+		tt := &myT{}
+		assert.Eventually(tt, func() bool { return false }, 30*time.Millisecond, 10*time.Millisecond)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "predicate did not become true")
+		assert.ContainsString(t, tt.message, "30ms")
+	})
+	t.Run("zero timeout, predicate true", func(t *testing.T) {
+		tt := &myT{}
+		assert.Eventually(tt, func() bool { return true }, 0, 10*time.Millisecond)
+		assert.That(t, !tt.Failed(), "expected pass on zero-timeout single call")
+	})
+	t.Run("zero timeout, predicate false", func(t *testing.T) {
+		tt := &myT{}
+		assert.Eventually(tt, func() bool { return false }, 0, 10*time.Millisecond)
+		assert.That(t, tt.Failed(), "expected fail on zero-timeout single call")
+	})
+	t.Run("predicate called at least once", func(t *testing.T) {
+		tt := &myT{}
+		calls := 0
+		assert.Eventually(tt, func() bool {
+			calls++
+			return false
+		}, 0, 10*time.Millisecond)
+		assert.That(t, calls >= 1, "predicate must be called at least once even with zero timeout")
+	})
+	t.Run("custom message", func(t *testing.T) {
+		tt := &myT{}
+		assert.Eventually(tt, func() bool { return false }, 10*time.Millisecond, 5*time.Millisecond, "case %s", "zeta")
+		assert.That(t, tt.Failed())
+		assert.ContainsString(t, tt.message, "case zeta")
 	})
 }
 

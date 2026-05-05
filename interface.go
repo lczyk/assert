@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/lczyk/assert/compare"
 )
@@ -298,4 +299,31 @@ func Panic(t testing.TB, f func(), f_recover func(t testing.TB, rec any), args .
 		assert(t, nested_assert_parent+1, false, []any{"expected panic, but no panic occurred"})
 	}()
 	f()
+}
+
+// Eventually polls predicate until it returns true or timeout elapses.
+// Sleeps interval between checks. Predicate is called at least once
+// (even with zero timeout). Fails the test if predicate never returns
+// true within the deadline.
+func Eventually(t testing.TB, predicate func() bool, timeout time.Duration, interval time.Duration, args ...any) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if predicate() {
+			return
+		}
+		time.Sleep(interval)
+	}
+	if predicate() {
+		return
+	}
+	file, line := get_parent_info(1)
+	msg := args_to_message(func() string {
+		return fmt.Sprintf("predicate did not become true within %v (poll interval %v)", timeout, interval)
+	}, args)
+	if loc, err := loc_str(file, line); err != nil {
+		t.Errorf(msg+" in %s:%d", file, line)
+	} else {
+		t.Errorf("%s in %s", msg, loc)
+	}
 }
