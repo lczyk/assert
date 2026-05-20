@@ -301,29 +301,41 @@ func EqualLineByLine(t testing.TB, fail Failer, a, b string, args []any) {
 	t.Helper()
 	a = strings.TrimSuffix(a, "\n")
 	b = strings.TrimSuffix(b, "\n")
-	a_lines := strings.Split(a, "\n")
-	b_lines := strings.Split(b, "\n")
-	var msg_fun func() string
-	if len(a_lines) != len(b_lines) {
-		msg_fun = func() string {
-			return fmt.Sprintf("expected '%d' lines, got '%d'", len(a_lines), len(b_lines))
-		}
-	} else {
-		var mismatches []string
-		for i := range a_lines {
-			if a_lines[i] != b_lines[i] {
-				mismatches = append(mismatches, fmt.Sprintf("line %d: expected '%s', got '%s'", i+1, a_lines[i], b_lines[i]))
-			}
-		}
-		if len(mismatches) > 0 {
-			msg_fun = func() string { return strings.Join(mismatches, "; ") }
-		}
+	// PERF: walk both strings line-by-line without strings.Split, which
+	// would alloc two []string. strings.Count + IndexByte both alloc-free.
+	aLines := strings.Count(a, "\n") + 1
+	bLines := strings.Count(b, "\n") + 1
+	if aLines != bLines {
+		file, line := GetParentInfo(2)
+		emit(fail, file, line, ArgsToMessage(func() string {
+			return fmt.Sprintf("expected '%d' lines, got '%d'", aLines, bLines)
+		}, args))
+		return
 	}
-	if msg_fun == nil {
+	var mismatches []string
+	ai, bi := 0, 0
+	for n := 1; n <= aLines; n++ {
+		aOff := strings.IndexByte(a[ai:], '\n')
+		if aOff < 0 {
+			aOff = len(a) - ai
+		}
+		bOff := strings.IndexByte(b[bi:], '\n')
+		if bOff < 0 {
+			bOff = len(b) - bi
+		}
+		aLine := a[ai : ai+aOff]
+		bLine := b[bi : bi+bOff]
+		if aLine != bLine {
+			mismatches = append(mismatches, fmt.Sprintf("line %d: expected '%s', got '%s'", n, aLine, bLine))
+		}
+		ai += aOff + 1
+		bi += bOff + 1
+	}
+	if len(mismatches) == 0 {
 		return
 	}
 	file, line := GetParentInfo(2)
-	emit(fail, file, line, ArgsToMessage(msg_fun, args))
+	emit(fail, file, line, ArgsToMessage(func() string { return strings.Join(mismatches, "; ") }, args))
 }
 
 func HasKey[K comparable, V any](t testing.TB, fail Failer, m map[K]V, k K, args []any) {
