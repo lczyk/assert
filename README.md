@@ -1,6 +1,8 @@
 # assert
 
 [![lint_and_test](https://github.com/lczyk/assert/actions/workflows/lint_and_test.yml/badge.svg)](https://github.com/lczyk/assert/actions/workflows/lint_and_test.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/lczyk/assert.svg)](https://pkg.go.dev/github.com/lczyk/assert)
+[![Go Report Card](https://goreportcard.com/badge/github.com/lczyk/assert)](https://goreportcard.com/report/github.com/lczyk/assert)
 
 Mini package to make writing tests in golang a bit neater -- a little bit more like `pytest`.
 
