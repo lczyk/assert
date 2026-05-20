@@ -42,12 +42,44 @@ Consequences:
 
 - Plays nicely with `go test`, `-run`, `-v`, `-race`, `t.Run` subtests, table
   tests, parallel tests — all unchanged.
-- Failures are soft (`t.Errorf`); the test continues. Use `t.Fatal` yourself
-  if you need fail-fast semantics.
+- Failures in `assert.*` are soft (`t.Errorf`); the test continues. The
+  sibling [`require`](#soft-vs-hard-assert-vs-require) package provides the
+  hard (`t.Fatalf`) variant.
 - No state hidden in package globals (besides a tiny source-line cache for
   failure rendering). Each assertion stands alone.
 - Drop-in: you can mix `assert.Equal(t, ...)` and raw `if a != b { t.Errorf(...) }`
   in the same test without conflict.
+
+## Soft vs hard: `assert` vs `require`
+
+Two packages, same surface, different failure mode:
+
+- [`github.com/lczyk/assert`](https://pkg.go.dev/github.com/lczyk/assert) -- soft. `t.Errorf` on failure. Test continues.
+- [`github.com/lczyk/assert/require`](https://pkg.go.dev/github.com/lczyk/assert/require) -- hard. `t.Fatalf` on failure. Test aborts.
+
+Pattern: `require.*` for preconditions, `assert.*` for the behaviour under test.
+
+```go
+func TestParse(t *testing.T) {
+    raw, err := os.ReadFile("fixture.json")
+    require.NoError(t, err) // setup; no point continuing on failure
+
+    cfg, err := Parse(raw)
+    require.NoError(t, err)
+
+    assert.Equal(t, cfg.Port, 8080)        // behaviour
+    assert.Equal(t, cfg.Host, "localhost") // both checked even if Port fails
+}
+```
+
+### Goroutine hazard
+
+`t.Fatalf` calls `runtime.Goexit`, which only unwinds the goroutine it runs on.
+A failed `require.*` call from a background goroutine will not stop the test
+and may silently pass. **Always call `require.*` from the test goroutine.**
+From background goroutines either use `assert.*` (the failure is goroutine-safe
+via `t.Errorf`) or surface the error back to the test goroutine through a
+channel and check there.
 
 ## Demos
 

@@ -8,7 +8,7 @@ Proposals live in `*.prop.md` files. Each has a YAML frontmatter:
 
 ```yaml
 ---
-status: open | implemented | rejected | shelved
+status: open | implemented | rejected | shelved | superseded
 date: YYYY-MM-DD
 description: one-line hook
 ---

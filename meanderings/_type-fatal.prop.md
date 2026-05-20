@@ -1,14 +1,20 @@
 ---
-status: implemented
+status: superseded
 date: 2026-05-05
-description: Type[T] fails fatally (t.Fatalf) on mismatch — the returned zero value is a nil-deref footgun
+description: Type[T] fails fatally (t.Fatalf) on mismatch -- the returned zero value is a nil-deref footgun
 ---
 
 # Proposal: Type[T] Fatal-by-default
 
+> **Superseded by [`_require-submodule.prop.md`](_require-submodule.prop.md)
+> (2026-05-20).** The Fatal asymmetry described below was reverted when the
+> `require` sub-package shipped: `assert.Type` is now soft (uniform with
+> the rest of `assert.*`), and `require.Type` covers the hard-fail
+> use case described here.
+>
 > Sub-item of #10 in the godep_differ migration proposal. Carved out as
-> a focused decision because Type[T]'s shape — assertion that returns a
-> value — makes soft-fail genuinely unsafe, not just inconvenient.
+> a focused decision because Type[T]'s shape -- assertion that returns a
+> value -- makes soft-fail genuinely unsafe, not just inconvenient.
 
 ## Gap
 
@@ -83,8 +89,10 @@ Shipped in v0.6.x.
 ## What this does NOT do
 
 - Does not introduce a `Must*` family or `require` sub-package. `Type[T]`
-  is a one-off carve-out; the broader question (#1 in the godep_differ
-  proposal) remains open in [must-variants.prop.md](must-variants.prop.md).
+  was a one-off carve-out; the broader question (#1 in the godep_differ
+  proposal) was later resolved by shipping the `require` sub-package
+  -- see [`_require-submodule.prop.md`](_require-submodule.prop.md),
+  which also reverts the Fatal asymmetry described in this proposal.
 - Does not provide a soft-fail variant of `Type[T]`. If someone needs
   one (e.g. probing optional types), they can write `_, ok := obj.(T)`
   directly -- which is what they'd do today anyway.

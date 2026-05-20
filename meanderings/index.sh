@@ -56,4 +56,5 @@ group implemented IMPLEMENTED "$GRN"
 group open        OPEN        "$BLU"
 group shelved     SHELVED     "$YLW"
 group rejected    REJECTED    "$RED"
+group superseded  SUPERSEDED  "$DIM"
 echo

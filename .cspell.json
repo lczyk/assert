@@ -30,6 +30,7 @@
     "footgun",
     "frontmatter",
     "funcs",
+    "impls",
     "godep",
     "goroutines",
     "godoc",
