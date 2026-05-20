@@ -263,9 +263,9 @@ func ExampleType() {
 	s := assert.Type[string](t, v)
 	fmt.Println(s, t.Failed())
 
-	// Note: a Type assertion that fails calls t.Fatalf, which unwinds the
-	// test goroutine via runtime.Goexit. Cannot demonstrate that path in a
-	// linear godoc example.
+	// On mismatch, Type calls t.Errorf and returns the zero value of T.
+	// For hard-fail semantics (test aborts on mismatch, return value safe
+	// to use unconditionally) use require.Type from the require sub-package.
 
 	// output:
 	// hello false

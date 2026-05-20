@@ -2,11 +2,11 @@
 // makes test bodies a little terser -- closer in feel to pytest -- without
 // introducing a custom runner, parallel reporting layer, or DSL.
 //
-// Every assertion takes a [testing.TB] as its first argument and ultimately
-// calls [testing.TB.Errorf] (or [testing.TB.Fatalf] for assertions that would
-// otherwise leave the caller with a zero value, like [Type]). Failures are
-// soft by default; the test continues. Use t.Fatal yourself if you need
-// fail-fast semantics.
+// Every assertion takes a [testing.TB] as its first argument and calls
+// [testing.TB.Errorf] on failure. Failures are soft; the test continues
+// past a failed assertion. For hard-fail (test aborts on first failure)
+// use the sibling sub-package [github.com/lczyk/assert/require], which
+// mirrors the same API but calls [testing.TB.Fatalf] instead.
 //
 // # Example
 //

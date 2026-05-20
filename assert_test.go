@@ -33,7 +33,7 @@ func (m *myThingImpl) SomeBehaviour() {}
 var _ myThing = &myThingImpl{}
 
 func TestType(t *testing.T) {
-	t.Run("fails fatally", func(t *testing.T) {
+	t.Run("fails on mismatch", func(t *testing.T) {
 		tt := &myT{}
 		assert.That(t, !tt.Failed())
 		var x int = 1
