@@ -161,6 +161,12 @@ func getSourceSnippet(file string, line int) (string, error) {
 	for i := line - 1; i < len(lines); i++ {
 		s := lines[i]
 		out = append(out, strings.TrimSpace(s))
+		// Only raw (backtick) strings span lines in Go; a `"` or `'`
+		// left open at end-of-line (e.g. an apostrophe in a comment)
+		// must not leak into the next line.
+		if inStr && quote != '`' {
+			inStr = false
+		}
 		for j := 0; j < len(s); j++ {
 			c := s[j]
 			if inStr {
