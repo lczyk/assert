@@ -45,8 +45,8 @@ func NoError(t testing.TB, err error, args ...any) {
 }
 
 // Error requires that err is non-nil and matches expected. See
-// assert.Error for the full type-switch on expected. Failure aborts
-// the test.
+// assert.Error for the full type-switch on expected (and the panic on
+// unsupported expected types). Failure aborts the test.
 func Error(t testing.TB, err error, expected any, args ...any) {
 	t.Helper()
 	core.Error(t, t.Fatalf, err, expected, args)
@@ -106,7 +106,8 @@ func NotNil(t testing.TB, x any, args ...any) {
 	core.NotNil(t, t.Fatalf, x, args)
 }
 
-// Len requires that len(x) == n. Failure aborts the test.
+// Len requires that len(x) == n. See assert.Len for the panic on
+// unsupported types of x. Failure aborts the test.
 func Len(t testing.TB, x any, n int, args ...any) {
 	t.Helper()
 	core.Len(t, t.Fatalf, x, n, args)

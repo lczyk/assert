@@ -71,6 +71,9 @@ func NoError(t testing.TB, err error, args ...any) {
 //     (equivalent to AnyError). For regex matching, pass *regexp.Regexp.
 //   - *regexp.Regexp: regex pattern, matched as a substring against err.Error()
 //
+// Any other expected type is a programmer error and panics (rather than
+// failing the test).
+//
 // Hard-fail variant: [github.com/lczyk/assert/require.Error].
 func Error(t testing.TB, err error, expected any, args ...any) {
 	t.Helper()
@@ -146,7 +149,9 @@ func NotNil(t testing.TB, x any, args ...any) {
 	core.NotNil(t, t.Errorf, x, args)
 }
 
-// Len asserts that len(x) == n. x must be array, chan, map, slice, or string.
+// Len asserts that len(x) == n. x must be array, chan, map, slice, or
+// string; any other type (including nil) is a programmer error and
+// panics (rather than failing the test).
 //
 // Hard-fail variant: [github.com/lczyk/assert/require.Len].
 func Len(t testing.TB, x any, n int, args ...any) {
