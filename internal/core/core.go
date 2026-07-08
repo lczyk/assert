@@ -111,7 +111,15 @@ func IsNil(x any) bool {
 // short-lived), would grow unbounded in a long-running daemon.
 // Concurrent first-read of same file may ReadFile twice; last Store wins.
 // Harmless -- both reads produce identical content.
-var sourceCache sync.Map // map[string][]string
+var sourceCache sync.Map // map[string]sourceEntry
+
+// sourceEntry caches the outcome of a source read -- lines on success,
+// the read error on failure -- so failed reads are cached explicitly
+// rather than as nil lines that happen to trip the range check.
+type sourceEntry struct {
+	lines []string
+	err   error
+}
 
 var (
 	errNoLocation     = errors.New("no file/line")
@@ -120,15 +128,16 @@ var (
 
 func loadSource(file string) ([]string, error) {
 	if v, ok := sourceCache.Load(file); ok {
-		return v.([]string), nil
+		e := v.(sourceEntry)
+		return e.lines, e.err
 	}
 	data, err := os.ReadFile(file)
 	if err != nil {
-		sourceCache.Store(file, []string(nil))
+		sourceCache.Store(file, sourceEntry{err: err})
 		return nil, err
 	}
 	lines := strings.Split(string(data), "\n")
-	sourceCache.Store(file, lines)
+	sourceCache.Store(file, sourceEntry{lines: lines})
 	return lines, nil
 }
 
