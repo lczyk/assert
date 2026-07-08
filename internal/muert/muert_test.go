@@ -64,6 +64,18 @@ func TestThat(t *testing.T) {
 			t.Errorf("expected message to contain %q, got %q", want, tt.message)
 		}
 	})
+	t.Run("percent in message survives verbatim", func(t *testing.T) {
+		// Regression: the message used to be spliced into the Errorf format
+		// string, so a literal % in it was re-interpreted as a verb.
+		tt := &myT{}
+		assert.That(tt, false, "100%% full")
+		if !tt.Failed() {
+			t.Errorf("expected fail")
+		}
+		if want := "100% full in "; !contains(tt.message, want) {
+			t.Errorf("expected message to contain %q, got %q", want, tt.message)
+		}
+	})
 	t.Run("false with non-string first arg", func(t *testing.T) {
 		// Covers the default %v branch of argsToMessage.
 		tt := &myT{}
