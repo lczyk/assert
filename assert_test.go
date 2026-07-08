@@ -518,7 +518,30 @@ func TestErrorExpectedAsError(t *testing.T) {
 		assert.ContainsString(t, tt.message, "expected error 'b'")
 		assert.ContainsString(t, tt.message, "got 'a'")
 	})
+	t.Run("typed-nil expected treated as no-error", func(t *testing.T) {
+		// (*nilRecvErr)(nil) inside the error interface is non-nil at the
+		// interface level; must behave like nil expected, not panic on
+		// Error() with a nil receiver.
+		var expected *nilRecvErr // nil pointer, non-nil interface once passed
+		t.Run("nil err passes", func(t *testing.T) {
+			tt := &myT{}
+			assert.Error(tt, nil, expected)
+			assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+		})
+		t.Run("non-nil err fails", func(t *testing.T) {
+			tt := &myT{}
+			assert.Error(tt, fmt.Errorf("boom"), expected)
+			assert.That(t, tt.Failed(), "expected fail")
+			assert.ContainsString(t, tt.message, "expected no error")
+		})
+	})
 }
+
+// nilRecvErr's Error() panics on a nil receiver -- used to prove the
+// typed-nil expected path never formats the expected error.
+type nilRecvErr struct{ msg string }
+
+func (e *nilRecvErr) Error() string { return e.msg }
 
 func TestErrorRegexpNilErr(t *testing.T) {
 	tt := &myT{}

@@ -112,7 +112,10 @@ func Error(t testing.TB, fail Failer, err error, expected any, args []any) {
 			}
 		}
 	case error:
-		if expected == nil {
+		// IsNil, not == nil: a typed-nil error (e.g. (*MyErr)(nil) in the
+		// interface) must take the no-error branch rather than fall through
+		// to DescribeErr, which would call Error() on a nil receiver.
+		if IsNil(expected) {
 			if err != nil {
 				msg_fun = func() string {
 					return fmt.Sprintf("expected no error, got %s", DescribeErr(err))
