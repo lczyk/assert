@@ -440,6 +440,13 @@ func TestEqualCmp(t *testing.T) {
 		assert.That(t, tt.Failed(), "expected fail")
 		assert.ContainsString(t, tt.message, "domain mismatch: 12 vs 23")
 	})
+	t.Run("comparator panics", func(t *testing.T) {
+		tt := &myT{}
+		boom := func(a, b int) bool { panic("boom") }
+		assert.EqualCmp(tt, 1, 2, boom)
+		assert.That(t, tt.Failed(), "expected fail from panic")
+		assert.ContainsString(t, tt.message, "Comparator panicked")
+	})
 }
 
 func TestEqualCmpAny(t *testing.T) {

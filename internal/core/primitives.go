@@ -176,11 +176,18 @@ func ErrorIs(t testing.TB, fail Failer, err, expected error, args []any) {
 }
 
 func EqualCmp[T any](t testing.TB, fail Failer, a, b T, comparator func(T, T) bool, args []any) {
+	// Comparator panic protection: recover and report. Capture file/line
+	// outside the defer so depth stays consistent. Mirrors EqualCmpAny.
+	file, line := GetParentInfo(2)
+	defer func() {
+		if r := recover(); r != nil {
+			emit(fail, file, line, fmt.Sprintf("Comparator panicked: %v", r))
+		}
+	}()
 	t.Helper()
 	if comparator(a, b) {
 		return
 	}
-	file, line := GetParentInfo(2)
 	msg := ArgsToMessage(func() string {
 		return fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b)
 	}, args)
