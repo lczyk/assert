@@ -73,8 +73,10 @@ func Error(t testing.TB, err error, expected string, args ...any) {
 }
 
 func get_parent_info(N int) (string, int) {
-	parent, _, _, _ := runtime.Caller(1 + N)
-	return runtime.FuncForPC(parent).FileLine(parent)
+	// Caller's own file/line is already pc-adjusted; FileLine on the raw
+	// pc can point past the call instruction.
+	_, file, line, _ := runtime.Caller(1 + N)
+	return file, line
 }
 
 // convert 'args ...any' to the assertion message

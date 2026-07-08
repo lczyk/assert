@@ -44,8 +44,11 @@ var AnyError error = anyErr{}
 // when the call chain is test -> wrapper -> core.Primitive ->
 // GetParentInfo.
 func GetParentInfo(N int) (string, int) {
-	parent, _, _, _ := runtime.Caller(1 + N)
-	return runtime.FuncForPC(parent).FileLine(parent)
+	// Use Caller's own file/line: it adjusts the pc for us, whereas
+	// FuncForPC(pc).FileLine(pc) on the raw pc can attribute to the
+	// line after the call instruction.
+	_, file, line, _ := runtime.Caller(1 + N)
+	return file, line
 }
 
 // ArgsToMessage converts the variadic args ...any tail of an assertion
