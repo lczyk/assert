@@ -96,6 +96,6 @@ func assert(t testing.TB, N int, predicate bool, args []any) {
 	t.Helper()
 	if !predicate {
 		file, line := get_parent_info(N)
-		t.Errorf(args_to_message(args)+" in %s:%d", file, line)
+		t.Errorf("%s in %s:%d", args_to_message(args), file, line)
 	}
 }

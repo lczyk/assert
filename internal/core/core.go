@@ -195,7 +195,7 @@ func LocStr(file string, line int) (string, error) {
 // fail with the assembled string.
 func emit(fail Failer, file string, line int, msg string) {
 	if loc, err := LocStr(file, line); err != nil {
-		fail(msg+" in %s:%d", file, line)
+		fail("%s in %s:%d", msg, file, line)
 	} else {
 		fail("%s in %s", msg, loc)
 	}
