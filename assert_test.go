@@ -716,6 +716,18 @@ func TestThatNonStringFirstArg(t *testing.T) {
 	assert.ContainsString(t, tt.message, "42")
 }
 
+func TestThatLoneMessageIsLiteral(t *testing.T) {
+	// A single string arg is not a format string: a stray % must survive.
+	tt := &myT{}
+	assert.That(tt, false, "100% sure")
+	assert.That(t, tt.Failed(), "expected fail")
+	assert.ContainsString(t, tt.message, "100% sure in ")
+	// With further args it is a format string, so %% is needed.
+	tt2 := &myT{}
+	assert.That(tt2, false, "%d%% done", 50)
+	assert.ContainsString(t, tt2.message, "50% done in ")
+}
+
 func TestThatFailNoArgs(t *testing.T) {
 	// Covers the "assertion failed" default-message lambda in assert().
 	tt := &myT{}

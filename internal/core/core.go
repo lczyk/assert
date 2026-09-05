@@ -52,23 +52,21 @@ func GetParentInfo(N int) (string, int) {
 }
 
 // ArgsToMessage converts the variadic args ...any tail of an assertion
-// call into a message. If args[0] is a string it's treated as a format
-// string (Sprintf semantics); otherwise args are stringified as a
-// whole. With no args, default_func is invoked to produce the message.
+// call into a message. A lone string is used verbatim; a string followed
+// by further args is a Sprintf format string; anything else is
+// stringified as a whole. With no args, default_func is invoked to
+// produce the message.
 func ArgsToMessage(default_func func() string, args []any) string {
-	var msg string
 	if len(args) == 0 {
-		msg = default_func()
-	} else {
-		switch args[0].(type) {
-		case string:
-			msg = args[0].(string)
-			msg = fmt.Sprintf(msg, args[1:]...)
-		default:
-			msg = fmt.Sprintf("%v", args)
-		}
+		return default_func()
 	}
-	return msg
+	if s, ok := args[0].(string); ok {
+		if len(args) == 1 {
+			return s
+		}
+		return fmt.Sprintf(s, args[1:]...)
+	}
+	return fmt.Sprintf("%v", args)
 }
 
 // DescribeErr formats an error for failure messages. Suppresses the

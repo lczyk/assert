@@ -86,7 +86,11 @@ func args_to_message(args []any) string {
 	if len(args) > 0 {
 		switch a := args[0].(type) {
 		case string:
-			msg = fmt.Sprintf(a, args[1:]...)
+			if len(args) == 1 {
+				msg = a
+			} else {
+				msg = fmt.Sprintf(a, args[1:]...)
+			}
 		default:
 			msg = fmt.Sprintf("%v", args)
 		}
