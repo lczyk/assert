@@ -11,6 +11,12 @@ type customErr struct{ msg string }
 
 func (e customErr) Error() string { return e.msg }
 
+// ptrErr's Error() dereferences its receiver, so a typed-nil *ptrErr panics
+// if Error() is ever called on it.
+type ptrErr struct{ msg string }
+
+func (e *ptrErr) Error() string { return e.msg }
+
 func TestCompareErrors(t *testing.T) {
 	t.Run("both nil", func(t *testing.T) {
 		if !compare.Errors(nil, nil) {
@@ -55,6 +61,22 @@ func TestCompareErrors(t *testing.T) {
 		b := customErr{msg: "boom"}
 		if compare.Errors(a, b) {
 			t.Errorf("expected same message but different types to be unequal")
+		}
+	})
+	t.Run("typed nil counts as nil and is never dereferenced", func(t *testing.T) {
+		var typedNil *ptrErr
+		got := &ptrErr{msg: "boom"}
+		if compare.Errors(got, typedNil) {
+			t.Errorf("expected non-nil vs typed-nil to be unequal")
+		}
+		if compare.Errors(typedNil, got) {
+			t.Errorf("expected typed-nil vs non-nil to be unequal")
+		}
+		if !compare.Errors(typedNil, nil) {
+			t.Errorf("expected typed-nil vs nil to be equal")
+		}
+		if !compare.Errors(typedNil, typedNil) {
+			t.Errorf("expected typed-nil vs typed-nil to be equal")
 		}
 	})
 }

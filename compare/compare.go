@@ -6,14 +6,30 @@ import (
 )
 
 // Errors reports whether err and target are structurally equivalent: both nil,
-// or same dynamic type and equal Error() string.
+// or same dynamic type and equal Error() string. A typed nil (e.g. (*T)(nil)
+// stored in the interface) counts as nil.
 //
 // This does NOT walk the errors.Is wrap chain. Use ErrorsIs for that.
 func Errors(err error, target error) bool {
-	if err == nil || target == nil {
-		return err == nil && target == nil
+	errNil, targetNil := isNil(err), isNil(target)
+	if errNil || targetNil {
+		return errNil && targetNil
 	}
 	return reflect.TypeOf(err) == reflect.TypeOf(target) && err.Error() == target.Error()
+}
+
+// isNil reports whether e is nil or a typed nil boxed in the error
+// interface; calling Error() on the latter would dereference a nil receiver.
+func isNil(e error) bool {
+	if e == nil {
+		return true
+	}
+	v := reflect.ValueOf(e)
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice, reflect.UnsafePointer:
+		return v.IsNil()
+	}
+	return false
 }
 
 // ErrorsIs reports whether err matches target under errors.Is semantics

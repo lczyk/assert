@@ -106,7 +106,7 @@ func Error(t testing.TB, fail Failer, err error, expected any, args []any) {
 			msg_fun = func() string {
 				return fmt.Sprintf("expected error to contain '%s', got no error (nil)", expected)
 			}
-		} else if !strings.Contains(err.Error(), expected) {
+		} else if IsNil(err) || !strings.Contains(err.Error(), expected) {
 			msg_fun = func() string {
 				return fmt.Sprintf("expected error to contain '%s', got %s", expected, DescribeErr(err))
 			}
@@ -141,17 +141,20 @@ func Error(t testing.TB, fail Failer, err error, expected any, args []any) {
 			}
 		}
 	case *regexp.Regexp:
+		if expected == nil {
+			panic("Error: expected is a nil *regexp.Regexp")
+		}
 		if err == nil {
 			msg_fun = func() string {
 				return fmt.Sprintf("expected error '%v' (%T), got no error (nil)", expected, expected)
 			}
-		} else if !expected.MatchString(err.Error()) {
+		} else if IsNil(err) || !expected.MatchString(err.Error()) {
 			msg_fun = func() string {
 				return fmt.Sprintf("expected error to match '%s', got %s", expected, DescribeErr(err))
 			}
 		}
 	default:
-		panic("expected type is not an error or string")
+		panic(fmt.Sprintf("Error: expected must be nil, error, string, or *regexp.Regexp, got %T", expected))
 	}
 
 	if msg_fun != nil {

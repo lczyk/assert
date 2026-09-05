@@ -626,7 +626,52 @@ func TestErrorInvalidExpectedTypePanics(t *testing.T) {
 	assert.Panic(t, func() {
 		assert.Error(tt, fmt.Errorf("x"), 42)
 	}, func(t testing.TB, rec any) {
-		assert.Equal(t, rec, "expected type is not an error or string")
+		s, ok := rec.(string)
+		assert.That(t, ok, "expected string panic, got %T", rec)
+		assert.ContainsString(t, s, "*regexp.Regexp")
+		assert.ContainsString(t, s, "got int")
+	})
+}
+
+func TestErrorNilRegexpPanics(t *testing.T) {
+	var re *regexp.Regexp
+	assert.Panic(t, func() {
+		assert.Error(&myT{}, fmt.Errorf("x"), re)
+	}, func(t testing.TB, rec any) {
+		s, ok := rec.(string)
+		assert.That(t, ok, "expected string panic, got %T", rec)
+		assert.ContainsString(t, s, "nil *regexp.Regexp")
+	})
+}
+
+// A typed-nil err must never have Error() called on it (nilRecvErr's Error()
+// dereferences its receiver); it is reported as a typed nil instead.
+func TestErrorTypedNilErr(t *testing.T) {
+	var p *nilRecvErr
+	var err error = p
+	t.Run("string expected", func(t *testing.T) {
+		tt := &myT{}
+		assert.Error(tt, err, "boom")
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "typed-nil error (*assert_test.nilRecvErr)(nil)")
+	})
+	t.Run("regexp expected", func(t *testing.T) {
+		tt := &myT{}
+		assert.Error(tt, err, regexp.MustCompile("boom"))
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "typed-nil error")
+	})
+	t.Run("error expected of the same type", func(t *testing.T) {
+		tt := &myT{}
+		assert.Error(tt, err, error(&nilRecvErr{msg: "boom"}))
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "typed-nil error")
+	})
+	t.Run("NoError names the typed nil", func(t *testing.T) {
+		tt := &myT{}
+		assert.NoError(tt, err)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "typed-nil error (*assert_test.nilRecvErr)(nil)")
 	})
 }
 

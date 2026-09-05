@@ -73,8 +73,15 @@ func ArgsToMessage(default_func func() string, args []any) string {
 
 // DescribeErr formats an error for failure messages. Suppresses the
 // universal *errors.errorString / *fmt.wrapError type tags as noise;
-// keeps the type for custom error types where it's informative.
+// keeps the type for custom error types where it's informative. A typed
+// nil is named as such rather than having Error() called on it.
 func DescribeErr(e error) string {
+	if e == nil {
+		return "<nil>"
+	}
+	if IsNil(e) {
+		return fmt.Sprintf("typed-nil error (%T)(nil)", e)
+	}
 	t := fmt.Sprintf("%T", e)
 	if t == "*errors.errorString" || t == "*fmt.wrapError" {
 		return fmt.Sprintf("'%v'", e)
