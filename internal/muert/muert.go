@@ -41,36 +41,49 @@ SOFTWARE.
 `
 
 // Check that the predicate is true, otherwise it fail the test.
-func That(t testing.TB, predicate bool, args ...any) { t.Helper(); assert(t, 2, predicate, args) }
+func That(t testing.TB, predicate bool, args ...any) {
+	t.Helper()
+	assert(t, 2, predicate, assertion_failed, args)
+}
 
 // Check that two comparable values are equal, otherwise it fail the test.
 func Equal[T comparable](t testing.TB, a T, b T) {
 	t.Helper()
-	assert(t, 2, a == b, []any{"expected '%v' (%T) == '%v' (%T)", a, a, b, b})
+	assert(t, 2, a == b, func() string {
+		return fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b)
+	}, nil)
 }
 
 // Check that two comparable values are not equal, otherwise it fail the test.
 func NotEqual[T comparable](t testing.TB, a T, b T) {
 	t.Helper()
-	assert(t, 2, a != b, []any{"expected '%v' (%T) != '%v' (%T)", a, a, b, b})
+	assert(t, 2, a != b, func() string {
+		return fmt.Sprintf("expected '%v' (%T) != '%v' (%T)", a, a, b, b)
+	}, nil)
 }
 
 // Check that an error is nil.
-func NoError(t testing.TB, err error, args ...any) { t.Helper(); assert(t, 2, err == nil, args) }
+func NoError(t testing.TB, err error, args ...any) {
+	t.Helper()
+	assert(t, 2, err == nil, assertion_failed, args)
+}
 
 // Check that the error is not nil and contains the expected message.
 func Error(t testing.TB, err error, expected string, args ...any) {
 	t.Helper()
 	if err == nil {
-		assert(t, 2, false, []any{"expected error containing '%s', got nil", expected})
+		assert(t, 2, false, func() string {
+			return fmt.Sprintf("expected error containing '%s', got nil", expected)
+		}, args)
 		return
 	}
 	errs := err.Error()
-	assert(t, 2, strings.Contains(errs, expected), []any{
-		"expected error to contain '%s', got '%s' (%T): %v",
-		expected, errs, err, args,
-	})
+	assert(t, 2, strings.Contains(errs, expected), func() string {
+		return fmt.Sprintf("expected error to contain '%s', got '%s' (%T)", expected, errs, err)
+	}, args)
 }
+
+func assertion_failed() string { return "assertion failed" }
 
 func get_parent_info(N int) (string, int) {
 	// Caller's own file/line is already pc-adjusted; FileLine on the raw
@@ -79,29 +92,26 @@ func get_parent_info(N int) (string, int) {
 	return file, line
 }
 
-// convert 'args ...any' to the assertion message
-// internal utility so we don't use variadics to make the calls a bit more consistent
-func args_to_message(args []any) string {
-	var msg string = "assertion failed"
-	if len(args) > 0 {
-		switch a := args[0].(type) {
-		case string:
-			if len(args) == 1 {
-				msg = a
-			} else {
-				msg = fmt.Sprintf(a, args[1:]...)
-			}
-		default:
-			msg = fmt.Sprintf("%v", args)
-		}
+// convert 'args ...any' to the assertion message: a lone string is used
+// verbatim, a string plus further args is a Sprintf format, anything
+// else is printed with %v; with no args, default_msg is used.
+func args_to_message(default_msg func() string, args []any) string {
+	if len(args) == 0 {
+		return default_msg()
 	}
-	return msg
+	if s, ok := args[0].(string); ok {
+		if len(args) == 1 {
+			return s
+		}
+		return fmt.Sprintf(s, args[1:]...)
+	}
+	return fmt.Sprintf("%v", args)
 }
 
-func assert(t testing.TB, N int, predicate bool, args []any) {
+func assert(t testing.TB, N int, predicate bool, default_msg func() string, args []any) {
 	t.Helper()
 	if !predicate {
 		file, line := get_parent_info(N)
-		t.Errorf("%s in %s:%d", args_to_message(args), file, line)
+		t.Errorf("%s in %s:%d", args_to_message(default_msg, args), file, line)
 	}
 }

@@ -164,6 +164,25 @@ func TestError(t *testing.T) {
 			t.Errorf("expected message to contain %q, got %q", want, tt.message)
 		}
 	})
+	t.Run("no args leaves no trailing list", func(t *testing.T) {
+		tt := &myT{}
+		assert.Error(tt, fmt.Errorf("boom"), "oranges")
+		if want := "got 'boom' (*errors.errorString) in "; !contains(tt.message, want) {
+			t.Errorf("expected message to contain %q, got %q", want, tt.message)
+		}
+	})
+	t.Run("args override the message", func(t *testing.T) {
+		tt := &myT{}
+		assert.Error(tt, fmt.Errorf("boom"), "oranges", "ctx %d", 7)
+		if want := "ctx 7 in "; !contains(tt.message, want) {
+			t.Errorf("expected message to contain %q, got %q", want, tt.message)
+		}
+		tt2 := &myT{}
+		assert.Error(tt2, nil, "oranges", "ctx %d", 7)
+		if want := "ctx 7 in "; !contains(tt2.message, want) {
+			t.Errorf("expected message to contain %q on nil err, got %q", want, tt2.message)
+		}
+	})
 }
 
 func contains(s, sub string) bool {
