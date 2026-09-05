@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -34,7 +35,7 @@ func Equal[T comparable](t testing.TB, fail Failer, a, b T, args []any) {
 	}
 	file, line := GetParentInfo(2)
 	msg := ArgsToMessage(func() string {
-		return fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b)
+		return fmt.Sprintf("expected '%s' (%T) == '%s' (%T)", Fmt(a), a, Fmt(b), b)
 	}, args)
 	emit(fail, file, line, msg)
 }
@@ -46,7 +47,7 @@ func NotEqual[T comparable](t testing.TB, fail Failer, a, b T, args []any) {
 	}
 	file, line := GetParentInfo(2)
 	msg := ArgsToMessage(func() string {
-		return fmt.Sprintf("expected '%v' (%T) != '%v' (%T)", a, a, b, b)
+		return fmt.Sprintf("expected '%s' (%T) != '%s' (%T)", Fmt(a), a, Fmt(b), b)
 	}, args)
 	emit(fail, file, line, msg)
 }
@@ -179,7 +180,7 @@ func ErrorIs(t testing.TB, fail Failer, err, expected error, args []any) {
 		if expected == nil {
 			return fmt.Sprintf("expected no error, got %s", DescribeErr(err))
 		}
-		return fmt.Sprintf("expected errors.Is('%v', '%v') to be true, got %s", err, expected, DescribeErr(err))
+		return fmt.Sprintf("expected errors.Is('%s', '%s') to be true, got %s", Fmt(err), Fmt(expected), DescribeErr(err))
 	}, args)
 	emit(fail, file, line, msg)
 }
@@ -227,7 +228,7 @@ func compareSafely[T any](comparator func(T, T) bool, a, b T) (ok bool, rec any,
 func cmpMessage(a, b any, rec any, panicked bool, args []any) string {
 	if !panicked {
 		return ArgsToMessage(func() string {
-			return fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b)
+			return fmt.Sprintf("expected '%s' (%T) == '%s' (%T)", Fmt(a), a, Fmt(b), b)
 		}, args)
 	}
 	p := fmt.Sprintf("Comparator panicked: %v", rec)
@@ -245,7 +246,7 @@ func EqualArrays[T comparable](t testing.TB, fail Failer, a, b []T, args []any) 
 	}
 	file, line := GetParentInfo(2)
 	msg := ArgsToMessage(func() string {
-		return fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b)
+		return fmt.Sprintf("expected '%s' (%T) == '%s' (%T)", Fmt(a), a, Fmt(b), b)
 	}, args)
 	emit(fail, file, line, msg)
 }
@@ -257,7 +258,7 @@ func EqualMaps[K, V comparable](t testing.TB, fail Failer, a, b map[K]V, args []
 	}
 	file, line := GetParentInfo(2)
 	msg := ArgsToMessage(func() string {
-		return fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b)
+		return fmt.Sprintf("expected '%s' (%T) == '%s' (%T)", Fmt(a), a, Fmt(b), b)
 	}, args)
 	emit(fail, file, line, msg)
 }
@@ -269,7 +270,7 @@ func EqualArraysUnordered[T comparable](t testing.TB, fail Failer, a, b []T, arg
 	}
 	file, line := GetParentInfo(2)
 	msg := ArgsToMessage(func() string {
-		return fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b)
+		return fmt.Sprintf("expected '%s' (%T) == '%s' (%T)", Fmt(a), a, Fmt(b), b)
 	}, args)
 	emit(fail, file, line, msg)
 }
@@ -307,7 +308,7 @@ func Len(t testing.TB, fail Failer, x any, n int, args []any) {
 		return
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string { return fmt.Sprintf("expected len %d, got len %d: %v", n, got, x) }, args)
+	msg := ArgsToMessage(func() string { return fmt.Sprintf("expected len %d, got len %d: %s", n, got, Fmt(x)) }, args)
 	emit(fail, file, line, msg)
 }
 
@@ -358,7 +359,7 @@ func EqualLineByLine(t testing.TB, fail Failer, a, b string, args []any) {
 		aLine := a[ai : ai+aOff]
 		bLine := b[bi : bi+bOff]
 		if aLine != bLine {
-			mismatches = append(mismatches, fmt.Sprintf("line %d: expected '%s', got '%s'", n, aLine, bLine))
+			mismatches = append(mismatches, fmt.Sprintf("line %d: expected '%s', got '%s'", n, Truncate(aLine), Truncate(bLine)))
 		}
 		ai += aOff + 1
 		bi += bOff + 1
@@ -377,11 +378,14 @@ func HasKey[K comparable, V any](t testing.TB, fail Failer, m map[K]V, k K, args
 	}
 	file, line := GetParentInfo(2)
 	msg := ArgsToMessage(func() string {
-		keys := make([]K, 0, len(m))
+		// Sorted by their printed form so the message is stable across
+		// runs; K is only comparable, not ordered.
+		keys := make([]string, 0, len(m))
 		for kk := range m {
-			keys = append(keys, kk)
+			keys = append(keys, fmt.Sprint(kk))
 		}
-		return fmt.Sprintf("expected key '%v' (%T) in map, got keys %v", k, k, keys)
+		sort.Strings(keys)
+		return fmt.Sprintf("expected key '%v' (%T) in map, got keys %s", k, k, Fmt(keys))
 	}, args)
 	emit(fail, file, line, msg)
 }
@@ -393,7 +397,7 @@ func ContainsString(t testing.TB, fail Failer, haystack, needle string, args []a
 	}
 	file, line := GetParentInfo(2)
 	msg := ArgsToMessage(func() string {
-		return fmt.Sprintf("expected needle string '%s' to be in a haystack string '%s'", needle, haystack)
+		return fmt.Sprintf("expected needle string '%s' to be in a haystack string '%s'", Truncate(needle), Truncate(haystack))
 	}, args)
 	emit(fail, file, line, msg)
 }

@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"unicode/utf8"
 )
 
 // Failer is the failure-reporting function passed in by the wrapper
@@ -69,10 +70,32 @@ func ArgsToMessage(default_func func() string, args []any) string {
 	return fmt.Sprintf("%v", args)
 }
 
+// maxValueLen caps how much of a formatted value a failure message
+// carries; the rest is elided with a note of the total size.
+const maxValueLen = 2048
+
+// Truncate elides s beyond maxValueLen bytes, on a UTF-8 boundary.
+func Truncate(s string) string {
+	if len(s) <= maxValueLen {
+		return s
+	}
+	cut := maxValueLen
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return fmt.Sprintf("%s... (truncated, %d bytes total)", s[:cut], len(s))
+}
+
+// Fmt formats x with %v, truncated for use in a failure message.
+func Fmt(x any) string {
+	return Truncate(fmt.Sprint(x))
+}
+
 // DescribeErr formats an error for failure messages. Suppresses the
-// universal *errors.errorString / *fmt.wrapError type tags as noise;
-// keeps the type for custom error types where it's informative. A typed
-// nil is named as such rather than having Error() called on it.
+// type tags of the stdlib error types (errors.New, fmt.Errorf,
+// errors.Join) as noise; keeps the type for custom error types where
+// it's informative. A typed nil is named as such rather than having
+// Error() called on it.
 func DescribeErr(e error) string {
 	if e == nil {
 		return "<nil>"
@@ -80,21 +103,26 @@ func DescribeErr(e error) string {
 	if IsNil(e) {
 		return fmt.Sprintf("typed-nil error (%T)(nil)", e)
 	}
-	t := fmt.Sprintf("%T", e)
-	if t == "*errors.errorString" || t == "*fmt.wrapError" {
-		return fmt.Sprintf("'%v'", e)
+	switch t := fmt.Sprintf("%T", e); t {
+	case "*errors.errorString", "*errors.joinError", "*fmt.wrapError", "*fmt.wrapErrors":
+		return fmt.Sprintf("'%s'", Fmt(e))
+	default:
+		return fmt.Sprintf("'%s' (%s)", Fmt(e), t)
 	}
-	return fmt.Sprintf("'%v' (%s)", e, t)
 }
 
-// DescribeNonNil formats a non-nil value for failure messages.
-// For pointers it shows the pointed-to value rather than the address.
+// DescribeNonNil formats a non-nil value for failure messages. Pointers
+// are followed to the value they point at rather than printed as an
+// address; a chain that ends in a nil pointer is named as such.
 func DescribeNonNil(x any) string {
 	v := reflect.ValueOf(x)
-	if v.Kind() == reflect.Pointer && !v.IsNil() {
-		return fmt.Sprintf("'%v' (%T)", v.Elem().Interface(), x)
+	for depth := 0; v.Kind() == reflect.Pointer && depth < 8; depth++ {
+		if v.IsNil() {
+			return fmt.Sprintf("non-nil %T pointing at a nil %s", x, v.Type())
+		}
+		v = v.Elem()
 	}
-	return fmt.Sprintf("'%v' (%T)", x, x)
+	return fmt.Sprintf("'%s' (%T)", Fmt(v.Interface()), x)
 }
 
 // IsNil handles the typed-nil-in-interface case: var p *T = nil; var i any = p

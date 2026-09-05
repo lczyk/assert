@@ -839,6 +839,12 @@ func TestHasKey(t *testing.T) {
 		assert.That(t, tt.Failed())
 		assert.ContainsString(t, tt.message, "expected key 'any'")
 	})
+	t.Run("keys in the message are sorted", func(t *testing.T) {
+		tt := &myT{}
+		assert.HasKey(tt, map[string]int{"b": 1, "c": 2, "a": 3}, "z")
+		assert.That(t, tt.Failed())
+		assert.ContainsString(t, tt.message, "got keys [a b c]")
+	})
 	t.Run("custom message", func(t *testing.T) {
 		tt := &myT{}
 		assert.HasKey(tt, map[string]int{}, "k", "case %s", "epsilon")
@@ -1070,6 +1076,14 @@ func TestLen(t *testing.T) {
 		var s []int
 		assert.Len(tt, s, 0)
 		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+	})
+	t.Run("large values are truncated in the message", func(t *testing.T) {
+		tt := &myT{}
+		big := make([]int, 200000)
+		assert.Len(tt, big, 5)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.That(t, len(tt.message) < 4096, "expected a truncated message, got %d bytes", len(tt.message))
+		assert.ContainsString(t, tt.message, "truncated")
 	})
 	t.Run("unsupported kind panics", func(t *testing.T) {
 		assert.Panic(t, func() { assert.Len(&myT{}, 42, 1) }, func(t testing.TB, rec any) {

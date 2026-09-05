@@ -6,11 +6,13 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestEmitFallbackPercentInMessage(t *testing.T) {
@@ -130,5 +132,47 @@ func TestSnippetIsCapped(t *testing.T) {
 	got := strings.Split(snippet, "\n")
 	if len(got) != maxSnippetLines+1 || got[len(got)-1] != "..." {
 		t.Errorf("expected %d lines plus an ellipsis, got %d lines ending %q", maxSnippetLines, len(got), got[len(got)-1])
+	}
+}
+
+func TestTruncate(t *testing.T) {
+	short := strings.Repeat("a", maxValueLen)
+	if Truncate(short) != short {
+		t.Errorf("expected a value at the cap to be untouched")
+	}
+	long := strings.Repeat("a", maxValueLen) + "b"
+	got := Truncate(long)
+	if !strings.HasPrefix(got, short) || !strings.HasSuffix(got, fmt.Sprintf("(truncated, %d bytes total)", len(long))) {
+		t.Errorf("expected cap plus a size note, got %q", got[len(got)-60:])
+	}
+	// The cut must not split a multi-byte rune.
+	runes := strings.Repeat("\u00e9", maxValueLen) // 2 bytes each
+	if !utf8.ValidString(Truncate(runes)) {
+		t.Errorf("expected truncation on a rune boundary")
+	}
+}
+
+func TestDescribeNonNilPointerChain(t *testing.T) {
+	x := 7
+	p := &x
+	pp := &p
+	if got := DescribeNonNil(pp); !strings.Contains(got, "'7' (**int)") {
+		t.Errorf("expected the value behind the pointer chain, got %q", got)
+	}
+	var nilp *int
+	outer := &nilp
+	if got := DescribeNonNil(outer); got != "non-nil **int pointing at a nil *int" {
+		t.Errorf("expected the nil inner pointer to be named, got %q", got)
+	}
+}
+
+func TestDescribeErrStdlibTypesUntagged(t *testing.T) {
+	joined := errors.Join(errors.New("a"), errors.New("b"))
+	if got := DescribeErr(joined); strings.Contains(got, "joinError") {
+		t.Errorf("expected no type tag for errors.Join, got %q", got)
+	}
+	multi := fmt.Errorf("%w and %w", errors.New("a"), errors.New("b"))
+	if got := DescribeErr(multi); strings.Contains(got, "wrapErrors") {
+		t.Errorf("expected no type tag for multi-%%w, got %q", got)
 	}
 }
