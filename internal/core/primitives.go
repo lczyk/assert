@@ -185,41 +185,57 @@ func ErrorIs(t testing.TB, fail Failer, err, expected error, args []any) {
 }
 
 func EqualCmp[T any](t testing.TB, fail Failer, a, b T, comparator func(T, T) bool, args []any) {
-	// Comparator panic protection: recover and report. Capture file/line
-	// outside the defer so depth stays consistent. Mirrors EqualCmpAny.
-	file, line := GetParentInfo(2)
-	defer func() {
-		if r := recover(); r != nil {
-			emit(fail, file, line, fmt.Sprintf("Comparator panicked: %v", r))
-		}
-	}()
 	t.Helper()
-	if comparator(a, b) {
+	ok, rec, panicked := compareSafely(comparator, a, b)
+	if ok {
 		return
 	}
-	msg := ArgsToMessage(func() string {
-		return fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b)
-	}, args)
-	emit(fail, file, line, msg)
+	file, line := GetParentInfo(2)
+	emit(fail, file, line, cmpMessage(a, b, rec, panicked, args))
 }
 
 func EqualCmpAny(t testing.TB, fail Failer, a, b any, comparator func(any, any) bool, args []any) {
-	// Comparator panic protection: recover and report. Capture file/line
-	// outside the defer so depth stays consistent.
-	file, line := GetParentInfo(2)
-	defer func() {
-		if r := recover(); r != nil {
-			emit(fail, file, line, fmt.Sprintf("Comparator panicked: %v", r))
-		}
-	}()
 	t.Helper()
-	if comparator(a, b) {
+	ok, rec, panicked := compareSafely(comparator, a, b)
+	if ok {
 		return
 	}
-	msg := ArgsToMessage(func() string {
-		return fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b)
-	}, args)
-	emit(fail, file, line, msg)
+	file, line := GetParentInfo(2)
+	emit(fail, file, line, cmpMessage(a, b, rec, panicked, args))
+}
+
+// compareSafely calls comparator, turning a panic into a reported result
+// so the caller fails the test instead of crashing it. Only the
+// comparator runs under the recover, and it is fully unwound before the
+// caller looks up its location. If comparator exits via runtime.Goexit,
+// compareSafely does not return.
+func compareSafely[T any](comparator func(T, T) bool, a, b T) (ok bool, rec any, panicked bool) {
+	completed := false
+	defer func() {
+		if !completed {
+			panicked = true
+			rec = recover()
+		}
+	}()
+	ok = comparator(a, b)
+	completed = true
+	return ok, nil, false
+}
+
+// cmpMessage builds the EqualCmp failure message. A comparator panic is
+// always reported, appended to the custom message when one was given.
+func cmpMessage(a, b any, rec any, panicked bool, args []any) string {
+	if !panicked {
+		return ArgsToMessage(func() string {
+			return fmt.Sprintf("expected '%v' (%T) == '%v' (%T)", a, a, b, b)
+		}, args)
+	}
+	p := fmt.Sprintf("Comparator panicked: %v", rec)
+	msg := ArgsToMessage(func() string { return p }, args)
+	if len(args) > 0 {
+		msg += " (" + p + ")"
+	}
+	return msg
 }
 
 func EqualArrays[T comparable](t testing.TB, fail Failer, a, b []T, args []any) {

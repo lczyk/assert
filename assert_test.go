@@ -467,8 +467,18 @@ func TestEqualCmp(t *testing.T) {
 		tt := &myT{}
 		boom := func(a, b int) bool { panic("boom") }
 		assert.EqualCmp(tt, 1, 2, boom)
+		file, line := getAboveLineInfo(0)
 		assert.That(t, tt.Failed(), "expected fail from panic")
-		assert.ContainsString(t, tt.message, "Comparator panicked")
+		assert.ContainsString(t, tt.message, "Comparator panicked: boom")
+		assert.ContainsString(t, tt.message, "in "+file+":"+fmt.Sprint(line))
+	})
+	t.Run("comparator panics with custom message keeps both", func(t *testing.T) {
+		tt := &myT{}
+		boom := func(a, b int) bool { panic("boom") }
+		assert.EqualCmp(tt, 1, 2, boom, "widget %d", 7)
+		assert.That(t, tt.Failed(), "expected fail from panic")
+		assert.ContainsString(t, tt.message, "widget 7")
+		assert.ContainsString(t, tt.message, "Comparator panicked: boom")
 	})
 }
 

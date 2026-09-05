@@ -177,6 +177,20 @@ func BenchmarkEqualMaps(b *testing.B) {
 	}
 }
 
+func BenchmarkEqualCmp(b *testing.B) {
+	cmp := func(x, y int) bool { return x == y }
+	for i := 0; i < b.N; i++ {
+		assert.EqualCmp(b, 42, 42, cmp)
+	}
+}
+
+func BenchmarkEqualCmpAny(b *testing.B) {
+	cmp := func(x, y any) bool { return x == y }
+	for i := 0; i < b.N; i++ {
+		assert.EqualCmpAny(b, 42, 42, cmp)
+	}
+}
+
 func BenchmarkType(b *testing.B) {
 	var v any = "hello"
 	for i := 0; i < b.N; i++ {
