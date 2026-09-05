@@ -146,8 +146,13 @@ func loadSource(file string) ([]string, error) {
 	return lines, nil
 }
 
+// maxSnippetLines bounds a multi-line snippet; an unbalanced bracket
+// would otherwise run the scan to the end of the file.
+const maxSnippetLines = 20
+
 // getSourceSnippet returns the source line at `line`, plus any
 // continuation lines, until brace/paren/bracket depth returns to zero.
+// Brackets inside string, rune, and comment tokens do not count.
 func getSourceSnippet(file string, line int) (string, error) {
 	if file == "" || line <= 0 {
 		return "", errNoLocation
@@ -161,36 +166,47 @@ func getSourceSnippet(file string, line int) (string, error) {
 	}
 	depth := 0
 	inStr := false
+	inBlock := false // inside /* ... */
 	var quote byte
 	var out []string
 	for i := line - 1; i < len(lines); i++ {
+		if len(out) == maxSnippetLines {
+			out = append(out, "...")
+			break
+		}
 		s := lines[i]
 		out = append(out, strings.TrimSpace(s))
 		// Only raw (backtick) strings span lines in Go; a `"` or `'`
-		// left open at end-of-line (e.g. an apostrophe in a comment)
-		// must not leak into the next line.
+		// left open at end-of-line must not leak into the next line.
 		if inStr && quote != '`' {
 			inStr = false
 		}
+	scan:
 		for j := 0; j < len(s); j++ {
 			c := s[j]
-			if inStr {
-				if c == '\\' {
+			switch {
+			case inBlock:
+				if c == '*' && j+1 < len(s) && s[j+1] == '/' {
+					inBlock = false
 					j++
-					continue
 				}
-				if c == quote {
+			case inStr:
+				if c == '\\' && quote != '`' {
+					j++
+				} else if c == quote {
 					inStr = false
 				}
-				continue
-			}
-			switch c {
-			case '"', '\'', '`':
+			case c == '/' && j+1 < len(s) && s[j+1] == '/':
+				break scan
+			case c == '/' && j+1 < len(s) && s[j+1] == '*':
+				inBlock = true
+				j++
+			case c == '"' || c == '\'' || c == '`':
 				inStr = true
 				quote = c
-			case '(', '[', '{':
+			case c == '(' || c == '[' || c == '{':
 				depth++
-			case ')', ']', '}':
+			case c == ')' || c == ']' || c == '}':
 				depth--
 			}
 		}

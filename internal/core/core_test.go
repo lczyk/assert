@@ -63,3 +63,72 @@ func TestSnippetQuoteStateResetsPerLine(t *testing.T) {
 		t.Errorf("expected snippet to stop at the closing bracket, got %q", snippet)
 	}
 }
+
+func writeFixture(t *testing.T, lines ...string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "fixture.go")
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o644); err != nil {
+		t.Fatalf("cannot write fixture: %v", err)
+	}
+	return path
+}
+
+func TestSnippetIgnoresBracketsInComments(t *testing.T) {
+	t.Run("line comment after a complete call", func(t *testing.T) {
+		path := writeFixture(t,
+			"That(t, x) // see foo(",
+			"trailing()",
+		)
+		snippet, err := getSourceSnippet(path, 1)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if strings.Contains(snippet, "trailing") {
+			t.Errorf("expected snippet to stop after the call, got %q", snippet)
+		}
+	})
+	t.Run("closing bracket inside a comment does not end the call", func(t *testing.T) {
+		path := writeFixture(t,
+			"That(t,",
+			"\tx == y, // this ) is not real",
+			")",
+			"trailing()",
+		)
+		snippet, err := getSourceSnippet(path, 1)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !strings.HasSuffix(snippet, "\n)") {
+			t.Errorf("expected snippet to reach the real closing bracket, got %q", snippet)
+		}
+	})
+	t.Run("block comment", func(t *testing.T) {
+		path := writeFixture(t,
+			"That(t, /* bounds ( */ x)",
+			"trailing()",
+		)
+		snippet, err := getSourceSnippet(path, 1)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if strings.Contains(snippet, "trailing") {
+			t.Errorf("expected snippet to stop after the call, got %q", snippet)
+		}
+	})
+}
+
+func TestSnippetIsCapped(t *testing.T) {
+	lines := []string{"That(t, ("}
+	for i := 0; i < 2*maxSnippetLines; i++ {
+		lines = append(lines, "\tx,")
+	}
+	path := writeFixture(t, lines...)
+	snippet, err := getSourceSnippet(path, 1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	got := strings.Split(snippet, "\n")
+	if len(got) != maxSnippetLines+1 || got[len(got)-1] != "..." {
+		t.Errorf("expected %d lines plus an ellipsis, got %d lines ending %q", maxSnippetLines, len(got), got[len(got)-1])
+	}
+}
