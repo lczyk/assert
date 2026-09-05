@@ -76,18 +76,20 @@ Picked `require` over `must` / `ensure` / `expect` / `verify`:
 
 ## Implementation
 
-Extracted all primitive impls into `internal/core/`. Each takes a
-`Failer` (a method-value of either `t.Errorf` or `t.Fatalf`). The
-public `assert.*` and `require.*` packages are thin wrappers passing
-the appropriate one.
+Extracted all primitive impls into `internal/core/`. Each returns the
+rendered failure message and a flag; the public `assert.*` and
+`require.*` packages are thin wrappers that report it via `t.Errorf` or
+`t.Fatalf`. (Originally each primitive took a `Failer` method value and
+called it itself, which left the `t.Errorf` call in a frame not marked
+by `t.Helper()`, so `go test` blamed `core.go`.)
 
 ```
 internal/core/
-    core.go        -- Failer, Numeric, AnyError, shared internals
+    core.go        -- Numeric, AnyError, shared internals
     primitives.go  -- That, Equal, NoError, ...
 
-assert/interface.go   -- thin wrappers, pass t.Errorf
-require/require.go    -- thin wrappers, pass t.Fatalf
+assert/interface.go   -- thin wrappers, report via t.Errorf
+require/require.go    -- thin wrappers, report via t.Fatalf
 ```
 
 `AnyError` is defined once in `core` and re-exported from both

@@ -15,13 +15,11 @@ import (
 	"unicode/utf8"
 )
 
-func TestEmitFallbackPercentInMessage(t *testing.T) {
+func TestRenderFallbackPercentInMessage(t *testing.T) {
 	// Regression: the fallback used to splice the pre-formatted message
-	// into the Errorf format string, re-interpreting any literal % in it.
-	var got string
-	fail := func(format string, args ...any) { got = fmt.Sprintf(format, args...) }
+	// into a format string, re-interpreting any literal % in it.
 	missing := filepath.Join(t.TempDir(), "missing.go")
-	emit(fail, missing, 3, "100% full")
+	got := render(missing, 3, "100% full")
 	want := "100% full in " + missing + ":3"
 	if got != want {
 		t.Errorf("expected %q, got %q", want, got)

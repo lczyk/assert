@@ -16,44 +16,40 @@ import (
 //
 //   test -> public-wrapper -> core.Primitive -> GetParentInfo
 //
-// so depth N=2 attributes failures to the test source line.
+// so depth N=2 attributes failures to the test source line. A primitive
+// returns the rendered failure message and whether it failed; the
+// wrapper, being the frame that calls t.Errorf / t.Fatalf, reports it
+// and is the only frame that needs t.Helper().
 
-func That(t testing.TB, fail Failer, predicate bool, args []any) {
-	t.Helper()
+func That(predicate bool, args []any) (string, bool) {
 	if predicate {
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string { return "assertion failed" }, args)
-	emit(fail, file, line, msg)
+	return render(file, line, ArgsToMessage(func() string { return "assertion failed" }, args)), true
 }
 
-func Equal[T comparable](t testing.TB, fail Failer, a, b T, args []any) {
-	t.Helper()
+func Equal[T comparable](a, b T, args []any) (string, bool) {
 	if a == b {
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string {
+	return render(file, line, ArgsToMessage(func() string {
 		return fmt.Sprintf("expected '%s' (%T) == '%s' (%T)", Fmt(a), a, Fmt(b), b)
-	}, args)
-	emit(fail, file, line, msg)
+	}, args)), true
 }
 
-func NotEqual[T comparable](t testing.TB, fail Failer, a, b T, args []any) {
-	t.Helper()
+func NotEqual[T comparable](a, b T, args []any) (string, bool) {
 	if a != b {
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string {
+	return render(file, line, ArgsToMessage(func() string {
 		return fmt.Sprintf("expected '%s' (%T) != '%s' (%T)", Fmt(a), a, Fmt(b), b)
-	}, args)
-	emit(fail, file, line, msg)
+	}, args)), true
 }
 
-func NearlyEqual[T Numeric](t testing.TB, fail Failer, got, want, tolerance T, args []any) {
-	t.Helper()
+func NearlyEqual[T Numeric](got, want, tolerance T, args []any) (string, bool) {
 	var diff T
 	if got >= want {
 		diff = got - want
@@ -63,45 +59,38 @@ func NearlyEqual[T Numeric](t testing.TB, fail Failer, got, want, tolerance T, a
 	// diff is larger-minus-smaller, so it is negative only if the signed
 	// subtraction wrapped; that is a failure, not a pass.
 	if diff >= 0 && diff <= tolerance {
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string {
+	return render(file, line, ArgsToMessage(func() string {
 		if diff < 0 {
 			return fmt.Sprintf("expected '%v' nearly equal to '%v' (tolerance %v), but their difference overflows %T", got, want, tolerance, diff)
 		}
 		return fmt.Sprintf("expected '%v' nearly equal to '%v' (tolerance %v), got diff %v", got, want, tolerance, diff)
-	}, args)
-	emit(fail, file, line, msg)
+	}, args)), true
 }
 
-func NoError(t testing.TB, fail Failer, err error, args []any) {
-	t.Helper()
+func NoError(err error, args []any) (string, bool) {
 	if err == nil {
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string {
+	return render(file, line, ArgsToMessage(func() string {
 		return fmt.Sprintf("expected no error, got %s", DescribeErr(err))
-	}, args)
-	emit(fail, file, line, msg)
+	}, args)), true
 }
 
 // Error matches err against expected. See assert.Error / require.Error
 // godoc for the full type-switch on expected.
-func Error(t testing.TB, fail Failer, err error, expected any, args []any) {
-	t.Helper()
+func Error(err error, expected any, args []any) (string, bool) {
 	var msg_fun func() string
 
 	if e, ok := expected.(error); ok && e == AnyError {
-		if err == nil {
-			msg_fun = func() string { return "expected an error, got nil" }
+		if err != nil {
+			return "", false
 		}
-		if msg_fun != nil {
-			file, line := GetParentInfo(2)
-			emit(fail, file, line, ArgsToMessage(msg_fun, args))
-		}
-		return
+		file, line := GetParentInfo(2)
+		return render(file, line, ArgsToMessage(func() string { return "expected an error, got nil" }, args)), true
 	}
 
 	switch expected := expected.(type) {
@@ -116,9 +105,7 @@ func Error(t testing.TB, fail Failer, err error, expected any, args []any) {
 			}
 		}
 	case error:
-		// IsNil, not == nil: a typed-nil error (e.g. (*MyErr)(nil) in the
-		// interface) must take the no-error branch rather than fall through
-		// to DescribeErr, which would call Error() on a nil receiver.
+		// IsNil, not == nil: a typed-nil expected means no error expected.
 		if IsNil(expected) {
 			if err != nil {
 				msg_fun = func() string {
@@ -161,19 +148,19 @@ func Error(t testing.TB, fail Failer, err error, expected any, args []any) {
 		panic(fmt.Sprintf("Error: expected must be nil, error, string, or *regexp.Regexp, got %T", expected))
 	}
 
-	if msg_fun != nil {
-		file, line := GetParentInfo(2)
-		emit(fail, file, line, ArgsToMessage(msg_fun, args))
-	}
-}
-
-func ErrorIs(t testing.TB, fail Failer, err, expected error, args []any) {
-	t.Helper()
-	if compare.ErrorsIs(err, expected) {
-		return
+	if msg_fun == nil {
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string {
+	return render(file, line, ArgsToMessage(msg_fun, args)), true
+}
+
+func ErrorIs(err, expected error, args []any) (string, bool) {
+	if compare.ErrorsIs(err, expected) {
+		return "", false
+	}
+	file, line := GetParentInfo(2)
+	return render(file, line, ArgsToMessage(func() string {
 		if err == nil {
 			return fmt.Sprintf("expected error %s, got no error (nil)", DescribeErr(expected))
 		}
@@ -181,28 +168,25 @@ func ErrorIs(t testing.TB, fail Failer, err, expected error, args []any) {
 			return fmt.Sprintf("expected no error, got %s", DescribeErr(err))
 		}
 		return fmt.Sprintf("expected errors.Is('%s', '%s') to be true, got %s", Fmt(err), Fmt(expected), DescribeErr(err))
-	}, args)
-	emit(fail, file, line, msg)
+	}, args)), true
 }
 
-func EqualCmp[T any](t testing.TB, fail Failer, a, b T, comparator func(T, T) bool, args []any) {
-	t.Helper()
+func EqualCmp[T any](a, b T, comparator func(T, T) bool, args []any) (string, bool) {
 	ok, rec, panicked := compareSafely(comparator, a, b)
 	if ok {
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	emit(fail, file, line, cmpMessage(a, b, rec, panicked, args))
+	return render(file, line, cmpMessage(a, b, rec, panicked, args)), true
 }
 
-func EqualCmpAny(t testing.TB, fail Failer, a, b any, comparator func(any, any) bool, args []any) {
-	t.Helper()
+func EqualCmpAny(a, b any, comparator func(any, any) bool, args []any) (string, bool) {
 	ok, rec, panicked := compareSafely(comparator, a, b)
 	if ok {
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	emit(fail, file, line, cmpMessage(a, b, rec, panicked, args))
+	return render(file, line, cmpMessage(a, b, rec, panicked, args)), true
 }
 
 // compareSafely calls comparator, turning a panic into a reported result
@@ -239,64 +223,53 @@ func cmpMessage(a, b any, rec any, panicked bool, args []any) string {
 	return msg
 }
 
-func EqualArrays[T comparable](t testing.TB, fail Failer, a, b []T, args []any) {
-	t.Helper()
+func EqualArrays[T comparable](a, b []T, args []any) (string, bool) {
 	if compare.Arrays(a, b) {
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string {
+	return render(file, line, ArgsToMessage(func() string {
 		return fmt.Sprintf("expected '%s' (%T) == '%s' (%T)", Fmt(a), a, Fmt(b), b)
-	}, args)
-	emit(fail, file, line, msg)
+	}, args)), true
 }
 
-func EqualMaps[K, V comparable](t testing.TB, fail Failer, a, b map[K]V, args []any) {
-	t.Helper()
+func EqualMaps[K, V comparable](a, b map[K]V, args []any) (string, bool) {
 	if compare.Maps(a, b) {
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string {
+	return render(file, line, ArgsToMessage(func() string {
 		return fmt.Sprintf("expected '%s' (%T) == '%s' (%T)", Fmt(a), a, Fmt(b), b)
-	}, args)
-	emit(fail, file, line, msg)
+	}, args)), true
 }
 
-func EqualArraysUnordered[T comparable](t testing.TB, fail Failer, a, b []T, args []any) {
-	t.Helper()
+func EqualArraysUnordered[T comparable](a, b []T, args []any) (string, bool) {
 	if compare.ArraysUnordered(a, b) {
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string {
+	return render(file, line, ArgsToMessage(func() string {
 		return fmt.Sprintf("expected '%s' (%T) == '%s' (%T)", Fmt(a), a, Fmt(b), b)
-	}, args)
-	emit(fail, file, line, msg)
+	}, args)), true
 }
 
-func Nil(t testing.TB, fail Failer, x any, args []any) {
-	t.Helper()
+func Nil(x any, args []any) (string, bool) {
 	if IsNil(x) {
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string { return fmt.Sprintf("expected nil, got %s", DescribeNonNil(x)) }, args)
-	emit(fail, file, line, msg)
+	return render(file, line, ArgsToMessage(func() string { return fmt.Sprintf("expected nil, got %s", DescribeNonNil(x)) }, args)), true
 }
 
-func NotNil(t testing.TB, fail Failer, x any, args []any) {
-	t.Helper()
+func NotNil(x any, args []any) (string, bool) {
 	if !IsNil(x) {
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string { return fmt.Sprintf("expected non-nil, got nil (%T)", x) }, args)
-	emit(fail, file, line, msg)
+	return render(file, line, ArgsToMessage(func() string { return fmt.Sprintf("expected non-nil, got nil (%T)", x) }, args)), true
 }
 
-func Len(t testing.TB, fail Failer, x any, n int, args []any) {
-	t.Helper()
+func Len(x any, n int, args []any) (string, bool) {
 	v := reflect.ValueOf(x)
 	switch v.Kind() {
 	case reflect.Array, reflect.Chan, reflect.Map, reflect.Slice, reflect.String:
@@ -305,33 +278,26 @@ func Len(t testing.TB, fail Failer, x any, n int, args []any) {
 	}
 	got := v.Len()
 	if got == n {
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string { return fmt.Sprintf("expected len %d, got len %d: %s", n, got, Fmt(x)) }, args)
-	emit(fail, file, line, msg)
+	return render(file, line, ArgsToMessage(func() string { return fmt.Sprintf("expected len %d, got len %d: %s", n, got, Fmt(x)) }, args)), true
 }
 
-// Type asserts that obj is of type T and returns the asserted value.
-// On mismatch, fail is called and the zero value of T is returned.
-// Callers that need a guaranteed-non-zero return (i.e. cannot tolerate
-// a nil-deref after a soft failure) should pass t.Fatalf as the fail
-// argument -- this is what require.Type does.
-func Type[T any](t testing.TB, fail Failer, obj any, args []any) T {
-	t.Helper()
+// Type asserts that obj is of type T and returns the asserted value. On
+// mismatch the zero value of T is returned along with the failure.
+func Type[T any](obj any, args []any) (T, string, bool) {
 	if obj_T, ok := obj.(T); ok {
-		return obj_T
+		return obj_T, "", false
 	}
 	file, line := GetParentInfo(2)
 	msg := ArgsToMessage(func() string {
 		return fmt.Sprintf("expected type %s, got %T", reflect.TypeOf((*T)(nil)).Elem(), obj)
 	}, args)
-	emit(fail, file, line, msg)
-	return *new(T)
+	return *new(T), render(file, line, msg), true
 }
 
-func EqualLineByLine(t testing.TB, fail Failer, a, b string, args []any) {
-	t.Helper()
+func EqualLineByLine(a, b string, args []any) (string, bool) {
 	a = strings.TrimSuffix(a, "\n")
 	b = strings.TrimSuffix(b, "\n")
 	// PERF: walk both strings line-by-line without strings.Split, which
@@ -340,10 +306,9 @@ func EqualLineByLine(t testing.TB, fail Failer, a, b string, args []any) {
 	bLines := strings.Count(b, "\n") + 1
 	if aLines != bLines {
 		file, line := GetParentInfo(2)
-		emit(fail, file, line, ArgsToMessage(func() string {
+		return render(file, line, ArgsToMessage(func() string {
 			return fmt.Sprintf("expected '%d' lines, got '%d'", aLines, bLines)
-		}, args))
-		return
+		}, args)), true
 	}
 	var mismatches []string
 	ai, bi := 0, 0
@@ -365,19 +330,18 @@ func EqualLineByLine(t testing.TB, fail Failer, a, b string, args []any) {
 		bi += bOff + 1
 	}
 	if len(mismatches) == 0 {
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	emit(fail, file, line, ArgsToMessage(func() string { return strings.Join(mismatches, "; ") }, args))
+	return render(file, line, ArgsToMessage(func() string { return strings.Join(mismatches, "; ") }, args)), true
 }
 
-func HasKey[K comparable, V any](t testing.TB, fail Failer, m map[K]V, k K, args []any) {
-	t.Helper()
+func HasKey[K comparable, V any](m map[K]V, k K, args []any) (string, bool) {
 	if _, ok := m[k]; ok {
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string {
+	return render(file, line, ArgsToMessage(func() string {
 		// Sorted by their printed form so the message is stable across
 		// runs; K is only comparable, not ordered.
 		keys := make([]string, 0, len(m))
@@ -386,38 +350,34 @@ func HasKey[K comparable, V any](t testing.TB, fail Failer, m map[K]V, k K, args
 		}
 		sort.Strings(keys)
 		return fmt.Sprintf("expected key '%v' (%T) in map, got keys %s", k, k, Fmt(keys))
-	}, args)
-	emit(fail, file, line, msg)
+	}, args)), true
 }
 
-func ContainsString(t testing.TB, fail Failer, haystack, needle string, args []any) {
-	t.Helper()
+func ContainsString(haystack, needle string, args []any) (string, bool) {
 	if strings.Contains(haystack, needle) {
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string {
+	return render(file, line, ArgsToMessage(func() string {
 		return fmt.Sprintf("expected needle string '%s' to be in a haystack string '%s'", Truncate(needle), Truncate(haystack))
-	}, args)
-	emit(fail, file, line, msg)
+	}, args)), true
 }
 
 // Panic runs f through call so a panic (including panic(nil), which
 // recovers as nil on pre-1.21 main modules) and a normal return are
 // told apart from f leaving via runtime.Goexit (t.FailNow, t.Skip): in
-// that last case call never returns and nothing is reported here.
-func Panic(t testing.TB, fail Failer, f func(), f_recover func(t testing.TB, rec any), args []any) {
-	t.Helper()
+// that last case call never returns and nothing is reported. t is only
+// handed on to f_recover.
+func Panic(t testing.TB, f func(), f_recover func(t testing.TB, rec any), args []any) (string, bool) {
 	panicked, rec := call(f)
 	if panicked {
 		if f_recover != nil {
 			f_recover(t, rec)
 		}
-		return
+		return "", false
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string { return "expected panic, but no panic occurred" }, args)
-	emit(fail, file, line, msg)
+	return render(file, line, ArgsToMessage(func() string { return "expected panic, but no panic occurred" }, args)), true
 }
 
 // call runs f and reports whether it panicked, with the recovered value.
@@ -435,12 +395,11 @@ func call(f func()) (panicked bool, rec any) {
 	return false, nil
 }
 
-func Eventually(t testing.TB, fail Failer, predicate func() bool, timeout, interval time.Duration, args []any) {
-	t.Helper()
+func Eventually(predicate func() bool, timeout, interval time.Duration, args []any) (string, bool) {
 	deadline := time.Now().Add(timeout)
 	for {
 		if predicate() {
-			return
+			return "", false
 		}
 		remaining := time.Until(deadline)
 		if remaining <= 0 {
@@ -453,8 +412,7 @@ func Eventually(t testing.TB, fail Failer, predicate func() bool, timeout, inter
 		}
 	}
 	file, line := GetParentInfo(2)
-	msg := ArgsToMessage(func() string {
+	return render(file, line, ArgsToMessage(func() string {
 		return fmt.Sprintf("predicate did not become true within %v (poll interval %v)", timeout, interval)
-	}, args)
-	emit(fail, file, line, msg)
+	}, args)), true
 }

@@ -3,8 +3,11 @@ package assert_test
 import (
 	"fmt"
 	"math"
+	"os/exec"
+	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,6 +24,27 @@ func getAboveLineInfo(N int) (string, int) {
 
 func TestThat(t *testing.T) {
 	assert.That(t, true)
+}
+
+// TestFailureAttribution runs a real failing test in a subprocess: only
+// testing's own file:line decoration shows which frame it blames, and the
+// myT mock used everywhere else bypasses that machinery.
+func TestFailureAttribution(t *testing.T) {
+	if testing.Short() {
+		t.Skip("subprocess test")
+	}
+	goBin, err := exec.LookPath("go")
+	if err != nil {
+		t.Skip("go not on PATH")
+	}
+	_, file, _, _ := runtime.Caller(0)
+	cmd := exec.Command(goBin, "test", "-tags", "demo", "-count=1", "-run", "^TestDemoEqual$", "./demo/")
+	cmd.Dir = filepath.Dir(file)
+	out, _ := cmd.CombinedOutput() // the demo fails by design
+	s := string(out)
+	blamesTest := regexp.MustCompile(`(?m)^\s+demos_test\.go:\d+: expected '1' \(int\) == '2' \(int\)`)
+	assert.That(t, blamesTest.MatchString(s), "expected go test to blame demos_test.go, got:\n%s", s)
+	assert.That(t, !strings.Contains(s, "core.go:"), "expected no library frame in the prefix, got:\n%s", s)
 }
 
 type myThing interface {

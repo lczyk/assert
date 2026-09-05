@@ -1,7 +1,7 @@
 // Package core holds the shared implementation of the assertion
-// primitives. Each primitive takes a [Failer] (a method-value of
-// either [testing.TB.Errorf] or [testing.TB.Fatalf]); the public
-// wrapper packages (assert, require) pass the appropriate one.
+// primitives. Each primitive returns the rendered failure message and
+// whether it failed; the public wrapper packages (assert, require) call
+// [testing.TB.Errorf] or [testing.TB.Fatalf] with it.
 //
 // Internal to the module; not for direct downstream use.
 package core
@@ -16,11 +16,6 @@ import (
 	"sync"
 	"unicode/utf8"
 )
-
-// Failer is the failure-reporting function passed in by the wrapper
-// package. assert.* passes t.Errorf (soft); require.* passes t.Fatalf
-// (hard, calls runtime.Goexit on the test goroutine).
-type Failer func(format string, args ...any)
 
 // Numeric covers built-in integer and float kinds (and named types
 // based on them). Used as the constraint for NearlyEqual.
@@ -257,13 +252,12 @@ func LocStr(file string, line int) (string, error) {
 	return fmt.Sprintf("%s:%d\n  > %s", file, line, indented), nil
 }
 
-// emit is the shared tail used by every primitive: produce the
-// formatted message, look up the call-site source snippet, and call
-// fail with the assembled string.
-func emit(fail Failer, file string, line int, msg string) {
-	if loc, err := LocStr(file, line); err != nil {
-		fail("%s in %s:%d", msg, file, line)
-	} else {
-		fail("%s in %s", msg, loc)
+// render is the shared tail used by every primitive: attach the
+// call-site location, with the source snippet when it can be read.
+func render(file string, line int, msg string) string {
+	loc, err := LocStr(file, line)
+	if err != nil {
+		return fmt.Sprintf("%s in %s:%d", msg, file, line)
 	}
+	return fmt.Sprintf("%s in %s", msg, loc)
 }

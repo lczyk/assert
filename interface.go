@@ -24,7 +24,9 @@ var AnyError = core.AnyError
 // Hard-fail variant: [github.com/lczyk/assert/require.That].
 func That(t testing.TB, predicate bool, args ...any) {
 	t.Helper()
-	core.That(t, t.Errorf, predicate, args)
+	if msg, failed := core.That(predicate, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // Equal asserts that a == b. Argument order is (got, want) by
@@ -39,7 +41,9 @@ func That(t testing.TB, predicate bool, args ...any) {
 // Hard-fail variant: [github.com/lczyk/assert/require.Equal].
 func Equal[T comparable](t testing.TB, a T, b T, args ...any) {
 	t.Helper()
-	core.Equal(t, t.Errorf, a, b, args)
+	if msg, failed := core.Equal(a, b, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // NotEqual asserts that a != b. See [Equal] for the caveat on
@@ -48,7 +52,9 @@ func Equal[T comparable](t testing.TB, a T, b T, args ...any) {
 // Hard-fail variant: [github.com/lczyk/assert/require.NotEqual].
 func NotEqual[T comparable](t testing.TB, a T, b T, args ...any) {
 	t.Helper()
-	core.NotEqual(t, t.Errorf, a, b, args)
+	if msg, failed := core.NotEqual(a, b, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // NearlyEqual asserts that |got - want| <= tolerance. Generic over
@@ -60,7 +66,9 @@ func NotEqual[T comparable](t testing.TB, a T, b T, args ...any) {
 // Hard-fail variant: [github.com/lczyk/assert/require.NearlyEqual].
 func NearlyEqual[T core.Numeric](t testing.TB, got T, want T, tolerance T, args ...any) {
 	t.Helper()
-	core.NearlyEqual(t, t.Errorf, got, want, tolerance, args)
+	if msg, failed := core.NearlyEqual(got, want, tolerance, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // NoError asserts that err is nil. A typed nil ((*T)(nil) stored in the
@@ -70,7 +78,9 @@ func NearlyEqual[T core.Numeric](t testing.TB, got T, want T, tolerance T, args 
 // Hard-fail variant: [github.com/lczyk/assert/require.NoError].
 func NoError(t testing.TB, err error, args ...any) {
 	t.Helper()
-	core.NoError(t, t.Errorf, err, args)
+	if msg, failed := core.NoError(err, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // Error asserts that err matches expected.
@@ -93,7 +103,9 @@ func NoError(t testing.TB, err error, args ...any) {
 // Hard-fail variant: [github.com/lczyk/assert/require.Error].
 func Error(t testing.TB, err error, expected any, args ...any) {
 	t.Helper()
-	core.Error(t, t.Errorf, err, expected, args)
+	if msg, failed := core.Error(err, expected, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // ErrorIs asserts that err matches expected via errors.Is semantics
@@ -102,7 +114,9 @@ func Error(t testing.TB, err error, expected any, args ...any) {
 // Hard-fail variant: [github.com/lczyk/assert/require.ErrorIs].
 func ErrorIs(t testing.TB, err error, expected error, args ...any) {
 	t.Helper()
-	core.ErrorIs(t, t.Errorf, err, expected, args)
+	if msg, failed := core.ErrorIs(err, expected, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // EqualCmp compares two values using a custom comparator function.
@@ -110,7 +124,9 @@ func ErrorIs(t testing.TB, err error, expected error, args ...any) {
 // Hard-fail variant: [github.com/lczyk/assert/require.EqualCmp].
 func EqualCmp[T any](t testing.TB, a T, b T, comparator func(T, T) bool, args ...any) {
 	t.Helper()
-	core.EqualCmp(t, t.Errorf, a, b, comparator, args)
+	if msg, failed := core.EqualCmp(a, b, comparator, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // EqualCmpAny compares two values of any type using a custom
@@ -120,7 +136,9 @@ func EqualCmp[T any](t testing.TB, a T, b T, comparator func(T, T) bool, args ..
 // Hard-fail variant: [github.com/lczyk/assert/require.EqualCmpAny].
 func EqualCmpAny(t testing.TB, a any, b any, comparator func(any, any) bool, args ...any) {
 	t.Helper()
-	core.EqualCmpAny(t, t.Errorf, a, b, comparator, args)
+	if msg, failed := core.EqualCmpAny(a, b, comparator, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // EqualArrays compares two slices for element-wise equality. Despite
@@ -130,7 +148,9 @@ func EqualCmpAny(t testing.TB, a any, b any, comparator func(any, any) bool, arg
 // Hard-fail variant: [github.com/lczyk/assert/require.EqualArrays].
 func EqualArrays[T comparable](t testing.TB, a []T, b []T, args ...any) {
 	t.Helper()
-	core.EqualArrays(t, t.Errorf, a, b, args)
+	if msg, failed := core.EqualArrays(a, b, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // EqualMaps compares two maps for key/value equality. A nil and an
@@ -139,7 +159,9 @@ func EqualArrays[T comparable](t testing.TB, a []T, b []T, args ...any) {
 // Hard-fail variant: [github.com/lczyk/assert/require.EqualMaps].
 func EqualMaps[K comparable, V comparable](t testing.TB, a map[K]V, b map[K]V, args ...any) {
 	t.Helper()
-	core.EqualMaps(t, t.Errorf, a, b, args)
+	if msg, failed := core.EqualMaps(a, b, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // EqualArraysUnordered compares two slices for element-wise equality
@@ -149,7 +171,9 @@ func EqualMaps[K comparable, V comparable](t testing.TB, a map[K]V, b map[K]V, a
 // Hard-fail variant: [github.com/lczyk/assert/require.EqualArraysUnordered].
 func EqualArraysUnordered[T comparable](t testing.TB, a []T, b []T, args ...any) {
 	t.Helper()
-	core.EqualArraysUnordered(t, t.Errorf, a, b, args)
+	if msg, failed := core.EqualArraysUnordered(a, b, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // Nil asserts that x is nil. Handles typed-nil-in-interface for
@@ -159,7 +183,9 @@ func EqualArraysUnordered[T comparable](t testing.TB, a []T, b []T, args ...any)
 // Hard-fail variant: [github.com/lczyk/assert/require.Nil].
 func Nil(t testing.TB, x any, args ...any) {
 	t.Helper()
-	core.Nil(t, t.Errorf, x, args)
+	if msg, failed := core.Nil(x, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // NotNil asserts that x is not nil. Handles typed-nil-in-interface the
@@ -168,7 +194,9 @@ func Nil(t testing.TB, x any, args ...any) {
 // Hard-fail variant: [github.com/lczyk/assert/require.NotNil].
 func NotNil(t testing.TB, x any, args ...any) {
 	t.Helper()
-	core.NotNil(t, t.Errorf, x, args)
+	if msg, failed := core.NotNil(x, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // Len asserts that len(x) == n. x must be array, chan, map, slice, or
@@ -179,7 +207,9 @@ func NotNil(t testing.TB, x any, args ...any) {
 // Hard-fail variant: [github.com/lczyk/assert/require.Len].
 func Len(t testing.TB, x any, n int, args ...any) {
 	t.Helper()
-	core.Len(t, t.Errorf, x, n, args)
+	if msg, failed := core.Len(x, n, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // Type asserts that obj is of type T and returns the asserted value.
@@ -194,7 +224,11 @@ func Len(t testing.TB, x any, n int, args ...any) {
 // Hard-fail variant: [github.com/lczyk/assert/require.Type].
 func Type[T any](t testing.TB, obj any, args ...any) T {
 	t.Helper()
-	return core.Type[T](t, t.Errorf, obj, args)
+	v, msg, failed := core.Type[T](obj, args)
+	if failed {
+		t.Errorf("%s", msg)
+	}
+	return v
 }
 
 // EqualLineByLine compares two strings line by line. Ignores a single
@@ -204,7 +238,9 @@ func Type[T any](t testing.TB, obj any, args ...any) T {
 // Hard-fail variant: [github.com/lczyk/assert/require.EqualLineByLine].
 func EqualLineByLine(t testing.TB, a string, b string, args ...any) {
 	t.Helper()
-	core.EqualLineByLine(t, t.Errorf, a, b, args)
+	if msg, failed := core.EqualLineByLine(a, b, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // HasKey asserts that m contains key k.
@@ -212,7 +248,9 @@ func EqualLineByLine(t testing.TB, a string, b string, args ...any) {
 // Hard-fail variant: [github.com/lczyk/assert/require.HasKey].
 func HasKey[K comparable, V any](t testing.TB, m map[K]V, k K, args ...any) {
 	t.Helper()
-	core.HasKey(t, t.Errorf, m, k, args)
+	if msg, failed := core.HasKey(m, k, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // ContainsString asserts that haystack contains needle as a substring.
@@ -220,7 +258,9 @@ func HasKey[K comparable, V any](t testing.TB, m map[K]V, k K, args ...any) {
 // Hard-fail variant: [github.com/lczyk/assert/require.ContainsString].
 func ContainsString(t testing.TB, haystack string, needle string, args ...any) {
 	t.Helper()
-	core.ContainsString(t, t.Errorf, haystack, needle, args)
+	if msg, failed := core.ContainsString(haystack, needle, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // Panic asserts that f panics. f_recover, if non-nil, is called with
@@ -233,7 +273,9 @@ func ContainsString(t testing.TB, haystack string, needle string, args ...any) {
 // Hard-fail variant: [github.com/lczyk/assert/require.Panic].
 func Panic(t testing.TB, f func(), f_recover func(t testing.TB, rec any), args ...any) {
 	t.Helper()
-	core.Panic(t, t.Errorf, f, f_recover, args)
+	if msg, failed := core.Panic(t, f, f_recover, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
 
 // Eventually polls predicate until it returns true or timeout elapses.
@@ -248,5 +290,7 @@ func Panic(t testing.TB, f func(), f_recover func(t testing.TB, rec any), args .
 // Hard-fail variant: [github.com/lczyk/assert/require.Eventually].
 func Eventually(t testing.TB, predicate func() bool, timeout time.Duration, interval time.Duration, args ...any) {
 	t.Helper()
-	core.Eventually(t, t.Errorf, predicate, timeout, interval, args)
+	if msg, failed := core.Eventually(predicate, timeout, interval, args); failed {
+		t.Errorf("%s", msg)
+	}
 }
