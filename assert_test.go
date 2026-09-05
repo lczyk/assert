@@ -417,6 +417,28 @@ func TestPanic(t *testing.T) {
 		assert.Panic(tt, func() { panic("this is a panic") }, nil)
 		assert.That(t, !tt.Failed(), "Expected test to not fail, but it did")
 	})
+
+	t.Run("f leaving via Goexit reports nothing", func(t *testing.T) {
+		// t.FailNow / t.Skip inside f unwind the goroutine without a panic;
+		// Panic must not add a second 'no panic occurred' failure on top.
+		tt := &myT{}
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			assert.Panic(tt, func() { runtime.Goexit() }, nil)
+			tt.Errorf("unreachable: Panic returned after Goexit")
+		}()
+		<-done
+		assert.That(t, !tt.Failed(), "expected no failure, got: %s", tt.message)
+	})
+
+	t.Run("panic(nil) counts as a panic", func(t *testing.T) {
+		tt := &myT{}
+		called := false
+		assert.Panic(tt, func() { panic(nil) }, func(t testing.TB, rec any) { called = true })
+		assert.That(t, !tt.Failed(), "expected pass, got: %s", tt.message)
+		assert.That(t, called, "expected the recovery func to be called")
+	})
 }
 
 func TestEqualCmp(t *testing.T) {

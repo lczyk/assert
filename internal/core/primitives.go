@@ -15,9 +15,7 @@ import (
 //
 //   test -> public-wrapper -> core.Primitive -> GetParentInfo
 //
-// so depth N=2 attributes failures to the test source line. Panic is
-// the one exception (captures file/line before installing its defer
-// so the depth stays the same).
+// so depth N=2 attributes failures to the test source line.
 
 func That(t testing.TB, fail Failer, predicate bool, args []any) {
 	t.Helper()
@@ -384,23 +382,37 @@ func ContainsString(t testing.TB, fail Failer, haystack, needle string, args []a
 	emit(fail, file, line, msg)
 }
 
-// Panic captures the caller's file/line up-front so the deferred
-// recover path can emit with the correct location without depth
-// gymnastics.
+// Panic runs f through call so a panic (including panic(nil), which
+// recovers as nil on pre-1.21 main modules) and a normal return are
+// told apart from f leaving via runtime.Goexit (t.FailNow, t.Skip): in
+// that last case call never returns and nothing is reported here.
 func Panic(t testing.TB, fail Failer, f func(), f_recover func(t testing.TB, rec any), args []any) {
 	t.Helper()
-	file, line := GetParentInfo(2)
-	defer func() {
-		if r := recover(); r != nil {
-			if f_recover != nil {
-				f_recover(t, r)
-			}
-			return
+	panicked, rec := call(f)
+	if panicked {
+		if f_recover != nil {
+			f_recover(t, rec)
 		}
-		msg := ArgsToMessage(func() string { return "expected panic, but no panic occurred" }, args)
-		emit(fail, file, line, msg)
+		return
+	}
+	file, line := GetParentInfo(2)
+	msg := ArgsToMessage(func() string { return "expected panic, but no panic occurred" }, args)
+	emit(fail, file, line, msg)
+}
+
+// call runs f and reports whether it panicked, with the recovered value.
+// If f exits via runtime.Goexit, call does not return.
+func call(f func()) (panicked bool, rec any) {
+	completed := false
+	defer func() {
+		if !completed {
+			panicked = true
+			rec = recover()
+		}
 	}()
 	f()
+	completed = true
+	return false, nil
 }
 
 func Eventually(t testing.TB, fail Failer, predicate func() bool, timeout, interval time.Duration, args []any) {
