@@ -159,8 +159,8 @@ func TestDescribeNonNilPointerChain(t *testing.T) {
 	if got := DescribeNonNil(pp); !strings.Contains(got, "'7' (**int)") {
 		t.Errorf("expected the value behind the pointer chain, got %q", got)
 	}
-	var nilp *int
-	outer := &nilp
+	var nilPtr *int
+	outer := &nilPtr
 	if got := DescribeNonNil(outer); got != "non-nil **int pointing at a nil *int" {
 		t.Errorf("expected the nil inner pointer to be named, got %q", got)
 	}
