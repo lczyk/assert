@@ -2,6 +2,7 @@ package assert_test
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"runtime"
 	"testing"
@@ -835,6 +836,15 @@ func TestNearlyEqual(t *testing.T) {
 		tt := &myT{}
 		assert.NearlyEqual(tt, uint(3), uint(7), uint(5))
 		assert.That(t, !tt.Failed(), "expected pass (unsigned, want > got)")
+	})
+	t.Run("signed overflow fails instead of wrapping to a pass", func(t *testing.T) {
+		tt := &myT{}
+		assert.NearlyEqual(tt, int64(math.MaxInt64), int64(-1), int64(10))
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.ContainsString(t, tt.message, "overflows int64")
+		tt2 := &myT{}
+		assert.NearlyEqual(tt2, int8(127), int8(-128), int8(5))
+		assert.That(t, tt2.Failed(), "expected fail")
 	})
 	t.Run("zero tolerance is exact equality", func(t *testing.T) {
 		tt := &myT{}

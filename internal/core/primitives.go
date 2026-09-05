@@ -61,11 +61,16 @@ func NearlyEqual[T Numeric](t testing.TB, fail Failer, got, want, tolerance T, a
 	} else {
 		diff = want - got
 	}
-	if diff <= tolerance {
+	// diff is larger-minus-smaller, so it is negative only if the signed
+	// subtraction wrapped; that is a failure, not a pass.
+	if diff >= 0 && diff <= tolerance {
 		return
 	}
 	file, line := GetParentInfo(2)
 	msg := ArgsToMessage(func() string {
+		if diff < 0 {
+			return fmt.Sprintf("expected '%v' nearly equal to '%v' (tolerance %v), but their difference overflows %T", got, want, tolerance, diff)
+		}
 		return fmt.Sprintf("expected '%v' nearly equal to '%v' (tolerance %v), got diff %v", got, want, tolerance, diff)
 	}, args)
 	emit(fail, file, line, msg)
