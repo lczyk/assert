@@ -3,8 +3,12 @@
 // Intentional divergences from github.com/lczyk/assert:
 //   - Subset API: only That, Equal, NotEqual, NoError, Error. No EqualCmp,
 //     EqualArrays, EqualMaps, Type, Panic, etc.
-//   - Error(err, expected) does substring match (strings.Contains), not regex.
+//   - Error's expected is a plain string (substring match only): no AnyError
+//     sentinel, *regexp.Regexp, or error-value matching.
+//   - Equal and NotEqual take no custom message args.
 //   - NoError uses the generic "assertion failed" default message.
+//   - Failure messages show the raw error type tag and carry file:line
+//     only, no source snippet.
 //   - No dependency on the compare subpackage.
 package muert
 

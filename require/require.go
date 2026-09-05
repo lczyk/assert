@@ -19,34 +19,38 @@ func That(t testing.TB, predicate bool, args ...any) {
 	core.That(t, t.Fatalf, predicate, args)
 }
 
-// Equal requires that a == b. Failure aborts the test.
+// Equal requires that a == b. See assert.Equal for the caveat on
+// interface-typed T. Failure aborts the test.
 func Equal[T comparable](t testing.TB, a T, b T, args ...any) {
 	t.Helper()
 	core.Equal(t, t.Fatalf, a, b, args)
 }
 
-// NotEqual requires that a != b. Failure aborts the test.
+// NotEqual requires that a != b. See assert.Equal for the caveat on
+// interface-typed T. Failure aborts the test.
 func NotEqual[T comparable](t testing.TB, a T, b T, args ...any) {
 	t.Helper()
 	core.NotEqual(t, t.Fatalf, a, b, args)
 }
 
-// NearlyEqual requires that |got - want| <= tolerance. Failure aborts
-// the test.
+// NearlyEqual requires that |got - want| <= tolerance. NaN and two
+// infinities of the same sign never compare nearly equal; see
+// assert.NearlyEqual. Failure aborts the test.
 func NearlyEqual[T core.Numeric](t testing.TB, got T, want T, tolerance T, args ...any) {
 	t.Helper()
 	core.NearlyEqual(t, t.Fatalf, got, want, tolerance, args)
 }
 
-// NoError requires that err is nil. Failure aborts the test.
+// NoError requires that err is nil. A typed-nil error is not nil and
+// fails. Failure aborts the test.
 func NoError(t testing.TB, err error, args ...any) {
 	t.Helper()
 	core.NoError(t, t.Fatalf, err, args)
 }
 
-// Error requires that err is non-nil and matches expected. See
-// assert.Error for the full type-switch on expected (and the panic on
-// unsupported expected types). Failure aborts the test.
+// Error requires that err matches expected. See assert.Error for the
+// full type-switch on expected (and the panic on unsupported expected
+// types). Failure aborts the test.
 func Error(t testing.TB, err error, expected any, args ...any) {
 	t.Helper()
 	core.Error(t, t.Fatalf, err, expected, args)
@@ -73,34 +77,36 @@ func EqualCmpAny(t testing.TB, a any, b any, comparator func(any, any) bool, arg
 	core.EqualCmpAny(t, t.Fatalf, a, b, comparator, args)
 }
 
-// EqualArrays requires element-wise equality of two slices. Failure
-// aborts the test.
+// EqualArrays requires element-wise equality of two slices (not
+// arrays; pass a[:]). Nil equals empty. Failure aborts the test.
 func EqualArrays[T comparable](t testing.TB, a []T, b []T, args ...any) {
 	t.Helper()
 	core.EqualArrays(t, t.Fatalf, a, b, args)
 }
 
-// EqualMaps requires key/value equality of two maps. Failure aborts
-// the test.
+// EqualMaps requires key/value equality of two maps. Nil equals
+// empty. Failure aborts the test.
 func EqualMaps[K comparable, V comparable](t testing.TB, a map[K]V, b map[K]V, args ...any) {
 	t.Helper()
 	core.EqualMaps(t, t.Fatalf, a, b, args)
 }
 
-// EqualArraysUnordered requires multiset equality of two slices.
-// Failure aborts the test.
+// EqualArraysUnordered requires multiset equality of two slices. Nil
+// equals empty. Failure aborts the test.
 func EqualArraysUnordered[T comparable](t testing.TB, a []T, b []T, args ...any) {
 	t.Helper()
 	core.EqualArraysUnordered(t, t.Fatalf, a, b, args)
 }
 
-// Nil requires that x is nil. Failure aborts the test.
+// Nil requires that x is nil. Handles typed-nil-in-interface; see
+// assert.Nil. Failure aborts the test.
 func Nil(t testing.TB, x any, args ...any) {
 	t.Helper()
 	core.Nil(t, t.Fatalf, x, args)
 }
 
-// NotNil requires that x is not nil. Failure aborts the test.
+// NotNil requires that x is not nil. Handles typed-nil-in-interface;
+// see assert.Nil. Failure aborts the test.
 func NotNil(t testing.TB, x any, args ...any) {
 	t.Helper()
 	core.NotNil(t, t.Fatalf, x, args)
@@ -116,14 +122,15 @@ func Len(t testing.TB, x any, n int, args ...any) {
 // Type requires that obj is of type T and returns the asserted value.
 // Failure aborts the test, so the returned value is safe to use
 // unconditionally on the success path. This is the canonical use case
-// for require over assert.
+// for require over assert. A nil obj always fails, even for T = any.
 func Type[T any](t testing.TB, obj any, args ...any) T {
 	t.Helper()
 	return core.Type[T](t, t.Fatalf, obj, args)
 }
 
-// EqualLineByLine requires line-by-line equality of two strings.
-// Failure aborts the test.
+// EqualLineByLine requires line-by-line equality of two strings,
+// ignoring a single trailing newline on either side. Failure aborts
+// the test.
 func EqualLineByLine(t testing.TB, a string, b string, args ...any) {
 	t.Helper()
 	core.EqualLineByLine(t, t.Fatalf, a, b, args)
@@ -142,14 +149,18 @@ func ContainsString(t testing.TB, haystack string, needle string, args ...any) {
 	core.ContainsString(t, t.Fatalf, haystack, needle, args)
 }
 
-// Panic requires that f panics. Failure aborts the test.
+// Panic requires that f panics; f_recover, if non-nil, is called with
+// the recovered value. See assert.Panic for panic(nil) and for f
+// leaving via runtime.Goexit. Failure aborts the test.
 func Panic(t testing.TB, f func(), f_recover func(t testing.TB, rec any), args ...any) {
 	t.Helper()
 	core.Panic(t, t.Fatalf, f, f_recover, args)
 }
 
-// Eventually requires that predicate becomes true within timeout.
-// Failure aborts the test.
+// Eventually requires that predicate becomes true within timeout,
+// polling every interval; see assert.Eventually for the exact call
+// schedule and why predicate must not call require.* itself. Failure
+// aborts the test.
 func Eventually(t testing.TB, predicate func() bool, timeout time.Duration, interval time.Duration, args ...any) {
 	t.Helper()
 	core.Eventually(t, t.Fatalf, predicate, timeout, interval, args)

@@ -19,6 +19,8 @@ message is the empty string" — opposite of what it does.
 
 ## Outcome
 
-Shipped the sentinel: `var AnyError error = anyErr{}` in [interface.go](../interface.go).
+Shipped the sentinel: `var AnyError error = anyErr{}` in
+[internal/core/core.go](../internal/core/core.go), re-exported by both
+`assert` and `require`.
 `assert_error` checks `expected == AnyError` explicitly; empty string is
 no longer the recommended spelling for "any error".

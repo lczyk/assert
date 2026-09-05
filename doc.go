@@ -48,4 +48,19 @@
 // beyond a small source-line cache used to render failures with a snippet of
 // the failing call site. Drop-in: assert.Equal(t, ...) and raw
 // if a != b { t.Errorf(...) } coexist freely in the same test.
+//
+// Failure messages render values with %v, truncated beyond 2 KB. The
+// call-site snippet needs the source file to be readable at test time;
+// under -trimpath, or when the test binary runs on another machine, it
+// degrades to plain file:line.
+//
+// Every assertion takes a trailing args ...any custom message: a lone
+// string verbatim, a format string plus arguments, or anything else
+// printed with %v. See [That]. go vet's printf analysis does not cover
+// these calls.
+//
+// The equality assertions accept interface types for their type
+// parameter ([Equal] with any, for instance) and, like ==, panic on two
+// values of the same non-comparable dynamic type. [EqualCmp] with
+// reflect.DeepEqual covers those.
 package assert

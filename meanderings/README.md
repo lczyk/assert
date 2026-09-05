@@ -1,7 +1,7 @@
 # meanderings
 
 design notes, proposals, and comparisons. some shipped, some were
-rejected, some are still open. **NOT ALL SHOULD SHIP** — these are just
+superseded, some are still open. **NOT ALL SHOULD SHIP** -- these are just
 (sometimes wild) meanderings.
 
 Proposals live in `*.prop.md` files. Each has a YAML frontmatter:
@@ -14,7 +14,8 @@ description: one-line hook
 ---
 ```
 
-Files prefixed with `_` are no longer "active" (implemented or shelved),
+Files prefixed with `_` are no longer "active" (implemented, superseded,
+shelved, or rejected),
 so they sort to the bottom of `ls`.
 
 ## Style: no verdicts

@@ -18,7 +18,8 @@ printed `assertion failed`.
 
 ## Outcome
 
-Implemented in [source.go](../source.go). `locStr(file, line)` reads
+Implemented in [internal/core/core.go](../internal/core/core.go)
+(originally `source.go`, moved with the `require` split). `LocStr(file, line)` reads
 the source file (cached in `sourceCache`) and returns
 `file:line\n  > <source>`. For multi-line calls, reads continuation
 lines until paren/brace/bracket depth returns to zero.

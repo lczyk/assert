@@ -1,3 +1,6 @@
+// Package compare holds the boolean predicates behind the collection and
+// error assertions of github.com/lczyk/assert, usable on their own when
+// no testing.TB is at hand. Nil and empty slices or maps compare equal.
 package compare
 
 import (
@@ -41,6 +44,8 @@ func ErrorsIs(err error, target error) bool {
 	return errors.Is(err, target)
 }
 
+// Arrays reports whether two slices have the same length and equal
+// elements at every index. Nil and empty compare equal.
 func Arrays[T comparable](a []T, b []T) bool {
 	if len(a) != len(b) {
 		return false
@@ -53,6 +58,8 @@ func Arrays[T comparable](a []T, b []T) bool {
 	return true
 }
 
+// Maps reports whether two maps have the same keys with equal values.
+// Nil and empty compare equal.
 func Maps[T comparable, V comparable](a map[T]V, b map[T]V) bool {
 	if len(a) != len(b) {
 		return false
@@ -77,7 +84,9 @@ func Maps[T comparable, V comparable](a map[T]V, b map[T]V) bool {
 	return true
 }
 
-// Check if two arrays are equal, regardless of the order of the elements.
+// ArraysUnordered reports whether two slices hold the same elements
+// with the same counts, regardless of order. Nil and empty compare
+// equal.
 func ArraysUnordered[T comparable](a []T, b []T) bool {
 	if len(a) != len(b) {
 		return false

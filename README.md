@@ -74,11 +74,15 @@ func TestParse(t *testing.T) {
 ### Goroutine hazard
 
 `t.Fatalf` calls `runtime.Goexit`, which only unwinds the goroutine it runs on.
-A failed `require.*` call from a background goroutine will not stop the test
-and may silently pass. **Always call `require.*` from the test goroutine.**
-From background goroutines either use `assert.*` (the failure is goroutine-safe
-via `t.Errorf`) or surface the error back to the test goroutine through a
-channel and check there.
+A failed `require.*` call from a background goroutine still records the
+failure, but only that goroutine stops: whatever it was going to do next,
+including signalling the test that it is done, never happens, so a test
+waiting on it hangs unless the signal was deferred. Once the test function
+has returned, any `assert.*` or `require.*` call from a leftover goroutine
+panics inside `testing` and takes the whole test binary down.
+**Always call `require.*` from the test goroutine.** From background
+goroutines either use `assert.*` and make the test wait for them, or send
+the error back to the test goroutine through a channel and check it there.
 
 ## Demos
 
@@ -88,11 +92,14 @@ multi-line calls). Output is the point — the tests are tag-gated
 (`//go:build demo`) so a normal `go test ./...` stays clean.
 
 The runner is [`demo/demo_runner.sh`](demo/demo_runner.sh); demos are
-auto-discovered by grepping `^func TestDemo` from `demos_test.go`.
+auto-discovered by grepping `^func Test(Demo|Vanilla)` from `demos_test.go`
+and `vanilla_test.go`. A `TestDemoX` with a matching `TestVanillaX` runs
+right after it, so the stdlib and assert renderings of the same failure
+sit next to each other.
 
 ## dev
 
 There is a bunch of design meanderings in [meanderings/](meanderings/); some
-are implemented, some shelved, some rejected. **NOT ALL SHOULD ship** —
+are implemented, some superseded, some still open. **NOT ALL SHOULD ship** --
 these are just meanderings after all. See [meanderings/README.md](meanderings/README.md)
 for the index with statuses.

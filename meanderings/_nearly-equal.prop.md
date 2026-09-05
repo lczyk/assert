@@ -87,9 +87,10 @@ the more formal "within".
 - No `Approximately`-style relative tolerance (`|got-want| / |want|
   <= eps`). Absolute tolerance only. Proposal #8 didn't specify.
   Add later iff demand emerges.
-- Not exposed as `assert.Numeric` constraint -- the `numeric`
-  interface is unexported. External callers don't need to use it as
-  a bound; they only need to satisfy it.
+- Not exposed as `assert.Numeric` constraint -- it lives in
+  `internal/core` (`core.Numeric`), unreachable from outside the module.
+  External callers don't need to use it as a bound; they only need to
+  satisfy it.
 
 ## Outcome
 

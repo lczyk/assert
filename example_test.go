@@ -321,6 +321,7 @@ func ExampleEqual_sourceSnippet() {
 	// > assert.Equal(t, 1, 2)
 }
 
+// TestExample keeps the README's "before" snippet compiling.
 func TestExample(t *testing.T) {
 	a := 1
 	b := 2

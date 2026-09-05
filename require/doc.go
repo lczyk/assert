@@ -9,13 +9,17 @@
 //
 // testing.T.Fatalf calls [runtime.Goexit], which only unwinds the
 // goroutine it is called from. A failed require.* call from a goroutine
-// other than the one running the test will not stop the test, will not
-// be reported, and will leave the goroutine half-dead. The test may then
-// pass silently despite the failed assertion. ALWAYS call require.*
-// from the test goroutine. From background goroutines use assert.* (the
-// failure is reported via t.Errorf, which is goroutine-safe), capture
-// the error and surface it back through a channel, or do the check on
-// the test goroutine after the background work completes.
+// other than the one running the test still records the failure, but
+// only that goroutine stops: whatever it was going to do next,
+// including signalling the test that it is done, never happens, so a
+// test waiting on it hangs unless the signal was deferred. Once the test
+// function has returned, any assert.* or require.* call from a leftover
+// goroutine panics inside the testing package ("Fail in goroutine after
+// Test... has completed") and takes the whole test binary down. ALWAYS
+// call require.* from the test goroutine. From background goroutines
+// use assert.* and make the test wait for them, send the error back
+// through a channel, or do the check on the test goroutine after the
+// background work completes.
 //
 // # When to use which
 //

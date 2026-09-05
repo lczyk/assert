@@ -13,9 +13,13 @@ var AnyError = core.AnyError
 
 // That asserts that predicate is true.
 //
-// args is an optional custom failure message: if args[0] is a string,
-// it is treated as a format string (Sprintf semantics) and the rest
-// of args are its arguments. Otherwise args are formatted as %v.
+// args is an optional custom failure message, shared by every assertion
+// in this package: a lone string is used verbatim; a string followed by
+// further args is a Sprintf format string (so a literal % then needs
+// %%); anything else is formatted as %v. Only the built-in string type
+// counts: a named string type or an error as the sole arg is printed as
+// a one-element list. go vet's printf checks do not see these calls, so
+// verb/argument mismatches only show up in the rendered message.
 //
 // Hard-fail variant: [github.com/lczyk/assert/require.That].
 func That(t testing.TB, predicate bool, args ...any) {
@@ -27,13 +31,19 @@ func That(t testing.TB, predicate bool, args ...any) {
 // convention, but the failure message names both so either reading
 // is recoverable.
 //
+// T may be an interface type (e.g. any, as when comparing a recovered
+// panic value); as with ==, two values of the same non-comparable
+// dynamic type (slice, map, func) then panic at run time. Use
+// [EqualCmp] with reflect.DeepEqual for those.
+//
 // Hard-fail variant: [github.com/lczyk/assert/require.Equal].
 func Equal[T comparable](t testing.TB, a T, b T, args ...any) {
 	t.Helper()
 	core.Equal(t, t.Errorf, a, b, args)
 }
 
-// NotEqual asserts that a != b.
+// NotEqual asserts that a != b. See [Equal] for the caveat on
+// interface-typed T.
 //
 // Hard-fail variant: [github.com/lczyk/assert/require.NotEqual].
 func NotEqual[T comparable](t testing.TB, a T, b T, args ...any) {
@@ -43,7 +53,9 @@ func NotEqual[T comparable](t testing.TB, a T, b T, args ...any) {
 
 // NearlyEqual asserts that |got - want| <= tolerance. Generic over
 // numeric types. NaN comparisons always fail (NaN is not nearly equal
-// to anything, including itself).
+// to anything, including itself), and so does comparing two infinities
+// of the same sign (their difference is NaN). Signed integers whose
+// difference overflows T fail rather than wrapping.
 //
 // Hard-fail variant: [github.com/lczyk/assert/require.NearlyEqual].
 func NearlyEqual[T core.Numeric](t testing.TB, got T, want T, tolerance T, args ...any) {
@@ -51,7 +63,9 @@ func NearlyEqual[T core.Numeric](t testing.TB, got T, want T, tolerance T, args 
 	core.NearlyEqual(t, t.Errorf, got, want, tolerance, args)
 }
 
-// NoError asserts that err is nil.
+// NoError asserts that err is nil. A typed nil ((*T)(nil) stored in the
+// error interface) is not nil and fails; the message names it as a
+// typed nil rather than calling its Error method.
 //
 // Hard-fail variant: [github.com/lczyk/assert/require.NoError].
 func NoError(t testing.TB, err error, args ...any) {
@@ -59,7 +73,7 @@ func NoError(t testing.TB, err error, args ...any) {
 	core.NoError(t, t.Errorf, err, args)
 }
 
-// Error asserts that err is non-nil and matches expected.
+// Error asserts that err matches expected.
 //
 // expected may be:
 //   - nil: passes only if err is nil (equivalent to NoError)
@@ -71,8 +85,10 @@ func NoError(t testing.TB, err error, args ...any) {
 //     (equivalent to AnyError). For regex matching, pass *regexp.Regexp.
 //   - *regexp.Regexp: regex pattern, matched as a substring against err.Error()
 //
-// Any other expected type is a programmer error and panics (rather than
-// failing the test).
+// A typed-nil err counts as non-nil and is reported as such without its
+// Error method being called. Any other expected type, or a nil
+// *regexp.Regexp, is a programmer error and panics (rather than failing
+// the test).
 //
 // Hard-fail variant: [github.com/lczyk/assert/require.Error].
 func Error(t testing.TB, err error, expected any, args ...any) {
@@ -107,7 +123,9 @@ func EqualCmpAny(t testing.TB, a any, b any, comparator func(any, any) bool, arg
 	core.EqualCmpAny(t, t.Errorf, a, b, comparator, args)
 }
 
-// EqualArrays compares two slices for element-wise equality.
+// EqualArrays compares two slices for element-wise equality. Despite
+// the name the arguments are slices; pass a[:] for a fixed-size array.
+// A nil and an empty slice compare equal.
 //
 // Hard-fail variant: [github.com/lczyk/assert/require.EqualArrays].
 func EqualArrays[T comparable](t testing.TB, a []T, b []T, args ...any) {
@@ -115,7 +133,8 @@ func EqualArrays[T comparable](t testing.TB, a []T, b []T, args ...any) {
 	core.EqualArrays(t, t.Errorf, a, b, args)
 }
 
-// EqualMaps compares two maps for key/value equality.
+// EqualMaps compares two maps for key/value equality. A nil and an
+// empty map compare equal.
 //
 // Hard-fail variant: [github.com/lczyk/assert/require.EqualMaps].
 func EqualMaps[K comparable, V comparable](t testing.TB, a map[K]V, b map[K]V, args ...any) {
@@ -124,7 +143,8 @@ func EqualMaps[K comparable, V comparable](t testing.TB, a map[K]V, b map[K]V, a
 }
 
 // EqualArraysUnordered compares two slices for element-wise equality
-// ignoring order (multiset equality).
+// ignoring order (multiset equality). As with [EqualArrays], the
+// arguments are slices and nil equals empty.
 //
 // Hard-fail variant: [github.com/lczyk/assert/require.EqualArraysUnordered].
 func EqualArraysUnordered[T comparable](t testing.TB, a []T, b []T, args ...any) {
@@ -132,8 +152,9 @@ func EqualArraysUnordered[T comparable](t testing.TB, a []T, b []T, args ...any)
 	core.EqualArraysUnordered(t, t.Errorf, a, b, args)
 }
 
-// Nil asserts that x is nil. Handles typed-nil-in-interface (e.g.
-// (*T)(nil) inside any).
+// Nil asserts that x is nil. Handles typed-nil-in-interface for
+// pointer, chan, func, map, slice, interface, and unsafe.Pointer values
+// (e.g. (*T)(nil) inside any).
 //
 // Hard-fail variant: [github.com/lczyk/assert/require.Nil].
 func Nil(t testing.TB, x any, args ...any) {
@@ -141,7 +162,8 @@ func Nil(t testing.TB, x any, args ...any) {
 	core.Nil(t, t.Errorf, x, args)
 }
 
-// NotNil asserts that x is not nil. Handles typed-nil-in-interface.
+// NotNil asserts that x is not nil. Handles typed-nil-in-interface the
+// same way as [Nil].
 //
 // Hard-fail variant: [github.com/lczyk/assert/require.NotNil].
 func NotNil(t testing.TB, x any, args ...any) {
@@ -150,8 +172,9 @@ func NotNil(t testing.TB, x any, args ...any) {
 }
 
 // Len asserts that len(x) == n. x must be array, chan, map, slice, or
-// string; any other type (including nil) is a programmer error and
-// panics (rather than failing the test).
+// string; any other type (including nil, and a pointer to an array,
+// which the builtin len accepts) is a programmer error and panics
+// (rather than failing the test).
 //
 // Hard-fail variant: [github.com/lczyk/assert/require.Len].
 func Len(t testing.TB, x any, n int, args ...any) {
@@ -161,8 +184,12 @@ func Len(t testing.TB, x any, n int, args ...any) {
 
 // Type asserts that obj is of type T and returns the asserted value.
 // Fails softly (t.Errorf) on mismatch and returns the zero value of T,
-// which the caller must guard against. The hard-fail variant aborts on
-// mismatch, so its return value is safe to use unconditionally.
+// which the caller must guard against. That guard is only possible when
+// T's zero value is nil (pointer, interface, slice, map, chan, func);
+// for other T the zero value is indistinguishable from a real one, so
+// use the hard-fail variant, which aborts on mismatch and whose return
+// value is safe to use unconditionally. A nil obj always fails, even for
+// T = any, because a nil interface has no dynamic type.
 //
 // Hard-fail variant: [github.com/lczyk/assert/require.Type].
 func Type[T any](t testing.TB, obj any, args ...any) T {
@@ -197,7 +224,11 @@ func ContainsString(t testing.TB, haystack string, needle string, args ...any) {
 }
 
 // Panic asserts that f panics. f_recover, if non-nil, is called with
-// the recovered panic value for further inspection.
+// the recovered panic value for further inspection. Any panic counts,
+// including panic(nil), whose recovered value is nil when the main
+// module's go version is below 1.21. If f leaves via runtime.Goexit
+// instead (t.FailNow, t.Skip, a failed require.*), Panic reports
+// nothing and lets f's own outcome stand.
 //
 // Hard-fail variant: [github.com/lczyk/assert/require.Panic].
 func Panic(t testing.TB, f func(), f_recover func(t testing.TB, rec any), args ...any) {
@@ -206,9 +237,13 @@ func Panic(t testing.TB, f func(), f_recover func(t testing.TB, rec any), args .
 }
 
 // Eventually polls predicate until it returns true or timeout elapses.
-// Sleeps interval between checks. Predicate is called at least once
-// (even with zero timeout). Fails the test if predicate never returns
-// true within the deadline.
+// Sleeps interval between checks, never past the deadline, so the call
+// takes at most timeout plus one predicate call. Predicate is called at
+// least once (even with zero timeout) and a final time at the deadline.
+// A non-positive interval polls without any delay. The predicate must
+// report failure by returning false: a t.Fatalf or require.* inside it
+// ends the whole call at once rather than being retried. Fails the test
+// if predicate never returns true within the deadline.
 //
 // Hard-fail variant: [github.com/lczyk/assert/require.Eventually].
 func Eventually(t testing.TB, predicate func() bool, timeout time.Duration, interval time.Duration, args ...any) {

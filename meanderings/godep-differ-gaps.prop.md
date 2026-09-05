@@ -16,7 +16,8 @@ pointer; the rest are spelled out below.
 
 ## Already on the pile
 
-- **`Must*` / hard-fail variants** -- see [must-variants.prop.md](must-variants.prop.md).
+- **`Must*` / hard-fail variants** -- see [_require-submodule.prop.md](_require-submodule.prop.md)
+  (which superseded the earlier `must-variants` note).
   External report reinforces the pain (~200+ `if err != nil { t.FailNow() }`
   sites across one repo) and explicitly calls out `Type[T]` as the
   primitive that almost always wants Fatal semantics, since the returned
