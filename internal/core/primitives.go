@@ -434,14 +434,19 @@ func call(f func()) (panicked bool, rec any) {
 func Eventually(t testing.TB, fail Failer, predicate func() bool, timeout, interval time.Duration, args []any) {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
+	for {
 		if predicate() {
 			return
 		}
-		time.Sleep(interval)
-	}
-	if predicate() {
-		return
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			break
+		}
+		if interval < remaining {
+			time.Sleep(interval)
+		} else {
+			time.Sleep(remaining)
+		}
 	}
 	file, line := GetParentInfo(2)
 	msg := ArgsToMessage(func() string {

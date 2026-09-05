@@ -775,6 +775,14 @@ func TestEventually(t *testing.T) {
 		assert.Eventually(tt, func() bool { return false }, 0, 10*time.Millisecond)
 		assert.That(t, tt.Failed(), "expected fail on zero-timeout single call")
 	})
+	t.Run("interval longer than timeout does not overshoot", func(t *testing.T) {
+		tt := &myT{}
+		start := time.Now()
+		assert.Eventually(tt, func() bool { return false }, 20*time.Millisecond, time.Second)
+		elapsed := time.Since(start)
+		assert.That(t, tt.Failed(), "expected fail")
+		assert.That(t, elapsed < 500*time.Millisecond, "expected return near the 20ms timeout, took %v", elapsed)
+	})
 	t.Run("predicate called at least once", func(t *testing.T) {
 		tt := &myT{}
 		calls := 0
