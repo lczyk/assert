@@ -174,3 +174,23 @@ func TestDescribeErrStdlibTypesUntagged(t *testing.T) {
 		t.Errorf("expected no type tag for multi-%%w, got %q", got)
 	}
 }
+
+func TestDisplayPath(t *testing.T) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := displayPath(filepath.Join(cwd, "x_test.go")); got != "x_test.go" {
+		t.Errorf("expected a file below cwd as its relative path, got %q", got)
+	}
+	if got := displayPath(filepath.Join(cwd, "sub", "x.go")); got != filepath.Join("sub", "x.go") {
+		t.Errorf("expected a nested file as its relative path, got %q", got)
+	}
+	above := filepath.Join(filepath.Dir(cwd), "elsewhere.go")
+	if got := displayPath(above); got != above {
+		t.Errorf("expected a file outside cwd to keep its full path, got %q", got)
+	}
+	if got := displayPath("github.com/x/y/z.go"); got != "github.com/x/y/z.go" {
+		t.Errorf("expected a -trimpath pseudo path to be left alone, got %q", got)
+	}
+}

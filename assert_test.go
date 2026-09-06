@@ -14,12 +14,13 @@ import (
 	"github.com/lczyk/assert"
 )
 
-// get the file and line number of the line above the call to this function
+// get the file (as shown in messages: relative to the package dir) and
+// line number of the line above the call to this function
 func getAboveLineInfo(N int) (string, int) {
 	parent, _, _, _ := runtime.Caller(1)
 	info := runtime.FuncForPC(parent)
 	file, line := info.FileLine(parent)
-	return file, line - 1 - N
+	return filepath.Base(file), line - 1 - N
 }
 
 func TestThat(t *testing.T) {

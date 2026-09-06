@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"strings"
@@ -249,7 +250,23 @@ func LocStr(file string, line int) (string, error) {
 		return "", err
 	}
 	indented := strings.ReplaceAll(src, "\n", "\n  > ")
-	return fmt.Sprintf("%s:%d\n  > %s", file, line, indented), nil
+	return fmt.Sprintf("%s:%d\n  > %s", displayPath(file), line, indented), nil
+}
+
+// displayPath shortens file for messages: relative to the working
+// directory when it lies below it (under go test that is the package
+// dir, so a call in the test file shows as its basename, like testing's
+// own prefix), otherwise as given.
+func displayPath(file string) string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return file
+	}
+	rel, err := filepath.Rel(cwd, file)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return file
+	}
+	return rel
 }
 
 // render is the shared tail used by every primitive: attach the
@@ -257,7 +274,7 @@ func LocStr(file string, line int) (string, error) {
 func render(file string, line int, msg string) string {
 	loc, err := LocStr(file, line)
 	if err != nil {
-		return fmt.Sprintf("%s in %s:%d", msg, file, line)
+		return fmt.Sprintf("%s in %s:%d", msg, displayPath(file), line)
 	}
 	return fmt.Sprintf("%s in %s", msg, loc)
 }
