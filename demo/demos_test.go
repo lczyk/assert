@@ -56,10 +56,10 @@ func TestDemoNil(t *testing.T) {
 	assert.Nil(t, &x)
 }
 
-func TestDemoNilTypedNil(t *testing.T) {
+func TestDemoNotNilTypedNil(t *testing.T) {
 	var p *int
 	var i any = p
-	assert.Nil(t, i)
+	assert.NotNil(t, i)
 }
 
 func TestDemoNotNil(t *testing.T) {

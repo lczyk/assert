@@ -40,15 +40,15 @@ func TestVanillaEqualMaps(t *testing.T) {
 	}
 }
 
-// TestVanillaNilTypedNil shows the typed-nil-in-interface gotcha:
-// `var p *int = nil; var i any = p` — `i != nil` is TRUE even though
-// the underlying pointer is nil. Vanilla check silently passes here
-// (false negative); the paired TestDemoNilTypedNil uses assert.Nil
-// which correctly reports it via reflect.
-func TestVanillaNilTypedNil(t *testing.T) {
+// TestVanillaNotNilTypedNil shows the typed-nil-in-interface gotcha:
+// `var p *int = nil; var i any = p` makes `i == nil` false even though
+// the pointer inside is nil, so this check passes silently (a false
+// negative). The paired TestDemoNotNilTypedNil uses assert.NotNil,
+// which looks inside the interface and fails.
+func TestVanillaNotNilTypedNil(t *testing.T) {
 	var p *int
 	var i any = p
-	if i != nil {
-		t.Errorf("expected nil, got %v", i)
+	if i == nil {
+		t.Errorf("expected non-nil, got %v", i)
 	}
 }
